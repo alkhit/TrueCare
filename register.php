@@ -1,197 +1,153 @@
-<?php include 'includes/config.php'; ?>
-<?php include 'includes/header.php'; ?>
+<?php
+session_start();
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white text-center">
-                    <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Join TrueCare</h4>
-                </div>
-                <div class="card-body p-4">
-                    <form id="register-form" method="POST">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">Full Name</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                        <input type="text" class="form-control" id="name" name="name" required 
-                                               placeholder="Your full name">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email Address</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                        <input type="email" class="form-control" id="email" name="email" required 
-                                               placeholder="your@email.com">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">Phone Number</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                                        <input type="tel" class="form-control" id="phone" name="phone" 
-                                               placeholder="+254700000000">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="role" class="form-label">I want to:</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
-                                        <select class="form-select" id="role" name="role" required>
-                                            <option value="">Select Role</option>
-                                            <option value="donor">Donate to campaigns</option>
-                                            <option value="orphanage">Register my orphanage</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="password" class="form-label">Password</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                        <input type="password" class="form-control" id="password" name="password" 
-                                               required minlength="6" placeholder="At least 6 characters">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="confirm_password" class="form-label">Confirm Password</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                        <input type="password" class="form-control" id="confirm_password" 
-                                               name="confirm_password" required placeholder="Confirm your password">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-check mb-4">
-                            <input class="form-check-input" type="checkbox" id="terms" required>
-                            <label class="form-check-label" for="terms">
-                                I agree to the <a href="#" class="text-decoration-none">Terms of Service</a> 
-                                and <a href="#" class="text-decoration-none">Privacy Policy</a>
-                            </label>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-success w-100 py-2">
-                            <i class="fas fa-user-plus me-2"></i>Create Account
-                        </button>
-                    </form>
-                    <div class="text-center mt-4">
-                        <p class="text-muted">Already have an account? 
-                            <a href="<?php echo BASE_URL; ?>/login.php" class="text-decoration-none fw-bold">Login here</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+// Enable all errors
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-<script>
-// Direct event listener for the register form
-document.addEventListener('DOMContentLoaded', function() {
-    const registerForm = document.getElementById('register-form');
+// Include config
+require_once '../../includes/config.php';
+
+// Log the request
+error_log("=== REGISTRATION REQUEST ===");
+error_log("POST data: " . print_r($_POST, true));
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $role = $_POST['role'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
     
-    if (registerForm) {
-        registerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+    try {
+        // Validate inputs
+        $errors = [];
+        
+        if (empty($name)) $errors[] = "Name is required";
+        if (empty($email)) $errors[] = "Email is required";
+        if (empty($role)) $errors[] = "Role is required";
+        if (empty($password)) $errors[] = "Password is required";
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = "Invalid email format";
+        }
+        
+        if ($password !== $confirm_password) {
+            $errors[] = "Passwords do not match";
+        }
+        
+        if (strlen($password) < 6) {
+            $errors[] = "Password must be at least 6 characters";
+        }
+        
+        if (!in_array($role, ['donor', 'orphanage'])) {
+            $errors[] = "Invalid role selected";
+        }
+        
+        if (!empty($errors)) {
+            throw new Exception(implode(", ", $errors));
+        }
+
+        // Check if email exists
+        $checkQuery = "SELECT user_id FROM users WHERE email = :email";
+        $checkStmt = $db->prepare($checkQuery);
+        $checkStmt->bindParam(':email', $email);
+        
+        if (!$checkStmt->execute()) {
+            throw new Exception("Database error checking email availability.");
+        }
+        
+        if ($checkStmt->rowCount() > 0) {
+            throw new Exception("Email already registered. Please use a different email.");
+        }
+
+        // Hash password
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        error_log("Password hashed: $hashed_password");
+
+        // Insert user
+        $insertQuery = "INSERT INTO users (name, email, phone, role, password, created_at) 
+                        VALUES (:name, :email, :phone, :role, :password, NOW())";
+        $insertStmt = $db->prepare($insertQuery);
+        $insertStmt->bindParam(':name', $name);
+        $insertStmt->bindParam(':email', $email);
+        $insertStmt->bindParam(':phone', $phone);
+        $insertStmt->bindParam(':role', $role);
+        $insertStmt->bindParam(':password', $hashed_password);
+        
+        if ($insertStmt->execute()) {
+            $user_id = $db->lastInsertId();
+            error_log("✅ User created successfully - ID: $user_id");
             
-            // Use the global trueCareApp instance if available, otherwise handle directly
-            if (window.trueCareApp) {
-                window.trueCareApp.handleRegister(e);
-            } else {
-                // Fallback direct handling
-                handleRegisterDirectly(e);
+            // If orphanage, create orphanage record
+            if ($role === 'orphanage') {
+                $orphanageQuery = "INSERT INTO orphanages (user_id, name, location, status, created_at) 
+                                   VALUES (:user_id, :name, '', 'pending', NOW())";
+                $orphanageStmt = $db->prepare($orphanageQuery);
+                $orphanageStmt->bindParam(':user_id', $user_id);
+                $orphanageStmt->bindParam(':name', $name);
+                
+                if ($orphanageStmt->execute()) {
+                    error_log("✅ Orphanage record created");
+                } else {
+                    error_log("⚠️ Orphanage record creation failed (but user was created)");
+                }
             }
-        });
+            
+            // Set session
+            $_SESSION['user_id'] = $user_id;
+            $_SESSION['user_name'] = $name;
+            $_SESSION['user_email'] = $email;
+            $_SESSION['user_role'] = $role;
+            $_SESSION['logged_in'] = true;
+            
+            error_log("✅ Registration complete - session set");
+            
+            // Return success for AJAX or redirect
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Registration successful!',
+                    'redirect' => 'dashboard.php'
+                ]);
+            } else {
+                header("Location: dashboard.php");
+                exit;
+            }
+            
+        } else {
+            throw new Exception("Failed to create user account in database.");
+        }
+        
+    } catch (Exception $e) {
+        error_log("❌ Registration error: " . $e->getMessage());
+        
+        // Store error for form redisplay
+        $_SESSION['error'] = $e->getMessage();
+        $_SESSION['form_data'] = [
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'role' => $role
+        ];
+        
+        // Return error for AJAX or redirect
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        } else {
+            header("Location: ../../register.php");
+            exit;
+        }
     }
     
-    // Fallback function if trueCareApp isn't available
-    async function handleRegisterDirectly(event) {
-        const form = event.target;
-        const formData = new FormData(form);
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        
-        // Basic validation
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirm_password').value;
-        const terms = document.getElementById('terms');
-        
-        if (password !== confirmPassword) {
-            showToast('Passwords do not match!', 'error');
-            return;
-        }
-        
-        if (password.length < 6) {
-            showToast('Password must be at least 6 characters long!', 'error');
-            return;
-        }
-        
-        if (terms && !terms.checked) {
-            showToast('Please agree to the Terms of Service!', 'error');
-            return;
-        }
-        
-        try {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Account...';
+} else {
+    header("Location: ../../register.php");
+    exit;
+}
 
-            const response = await fetch('<?php echo BASE_URL; ?>/src/auth/register_process.php', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                showToast('Account created successfully! Redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = result.redirect || '<?php echo BASE_URL; ?>/login.php';
-                }, 1500);
-            } else {
-                showToast(result.message || 'Registration failed', 'error');
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            showToast('Network error. Please try again.', 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        }
-    }
-    
-    function showToast(message, type = 'info') {
-        // Simple toast implementation
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 5000);
-    }
-});
-</script>
-
-<?php include 'includes/footer.php'; ?>
+error_log("=== REGISTRATION PROCESS COMPLETE ===");
+?>

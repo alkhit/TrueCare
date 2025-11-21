@@ -31,7 +31,7 @@ include '../../includes/header.php';
                             <h5 class="m-0 font-weight-bold text-primary">Campaign Details</h5>
                         </div>
                         <div class="card-body">
-                            <form id="create-campaign-form" enctype="multipart/form-data">
+                            <form id="create-campaign-form" action="create_campaign_process.php" method="POST" enctype="multipart/form-data">
                                 <!-- Campaign Title -->
                                 <div class="mb-4">
                                     <label for="title" class="form-label fw-bold">Campaign Title *</label>
@@ -123,7 +123,7 @@ include '../../includes/header.php';
 
                                 <!-- Terms -->
                                 <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="campaign_terms" required>
+                                    <input class="form-check-input" type="checkbox" id="campaign_terms" name="campaign_terms" required>
                                     <label class="form-check-label" for="campaign_terms">
                                         I confirm that all information provided is accurate and that funds raised will be used solely for the stated purpose. I agree to provide updates on the campaign progress.
                                     </label>
@@ -197,6 +197,21 @@ document.addEventListener('DOMContentLoaded', function() {
     imageInput.addEventListener('change', function() {
         const file = this.files[0];
         if (file) {
+            // Check file size (5MB limit)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                this.value = '';
+                return;
+            }
+            
+            // Check file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPEG, PNG, GIF)');
+                this.value = '';
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 imagePreview.src = e.target.result;
@@ -212,11 +227,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Basic validation
         const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+        const category = document.getElementById('category').value;
         const targetAmount = document.getElementById('target_amount').value;
         const deadline = document.getElementById('deadline').value;
+        const campaignImage = document.getElementById('campaign_image').files[0];
+        const terms = document.getElementById('campaign_terms').checked;
         
+        // Validation checks
         if (title.length < 10) {
             alert('Please enter a more descriptive title (at least 10 characters)');
+            return;
+        }
+        
+        if (description.length < 50) {
+            alert('Please provide a more detailed description (at least 50 characters)');
+            return;
+        }
+        
+        if (!category) {
+            alert('Please select a category for your campaign');
             return;
         }
         
@@ -225,21 +255,66 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Show success message (in real app, this would submit to server)
-        alert('Campaign created successfully! It will be reviewed before going live.');
-        window.location.href = 'my_campaigns.php';
+        if (!deadline) {
+            alert('Please select a campaign deadline');
+            return;
+        }
+        
+        if (!campaignImage) {
+            alert('Please upload a campaign image');
+            return;
+        }
+        
+        if (!terms) {
+            alert('Please agree to the terms and conditions');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Campaign...';
+        
+        // Submit the form
+        this.submit();
     });
 
     // Set minimum date to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('deadline').min = tomorrow.toISOString().split('T')[0];
+    
+    // Set maximum date to 1 year from now
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    document.getElementById('deadline').max = nextYear.toISOString().split('T')[0];
 });
-</style>
+</script>
 
 <style>
 .form-label.fw-bold {
     color: #2c3e50;
+}
+
+.sidebar {
+    background: linear-gradient(135deg, #2c5aa0, #1a365f) !important;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #1e8449, #186a3b);
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #186a3b, #145a32);
+    transform: translateY(-1px);
 }
 </style>
 
