@@ -14,22 +14,27 @@ if (!function_exists('abs_path')) {
 if (!function_exists('isLoggedIn')) {
   function isLoggedIn() { return isset($_SESSION['user_id']); }
 }
-// includes/header.php
-// expects: $page_title (optional), $show_navbar (optional)
+
+// Determine if we should show navbar or sidebar
+$current_page = basename($_SERVER['PHP_SELF']);
+$public_pages = ['index.php', 'login.php', 'register.php', ''];
+
+$show_navbar = (!isLoggedIn() && in_array($current_page, $public_pages));
+$show_sidebar = (isLoggedIn() && !in_array($current_page, $public_pages));
+
 $page_title = $page_title ?? 'TrueCare';
-$show_navbar = $show_navbar ?? false;
 ?>
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo e($page_title); ?></title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link href="<?php echo abs_path('assets/css/style.css'); ?>" rel="stylesheet">
 </head>
-<body>
+<body class="<?php echo $show_sidebar ? 'has-sidebar' : ''; ?>">
 <?php if ($show_navbar): ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
   <div class="container">
@@ -65,7 +70,16 @@ $show_navbar = $show_navbar ?? false;
 </nav>
 <?php endif; ?>
 
-<button class="sidebar-toggle-btn d-xl-none" id="sidebarToggle" aria-label="Toggle menu">
-  <i class="fas fa-bars"></i>
-</button>
-<main class="py-4 container-fluid">
+<?php if ($show_sidebar): ?>
+  <!-- Sidebar and overlay for dashboard/pages -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <?php include __DIR__ . '/../src/auth/sidebar.php'; ?>
+  <button class="sidebar-toggle-btn d-lg-none" id="sidebarToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+  </button>
+<?php endif; ?>
+
+<!-- MAIN CONTENT AREA -->
+<!-- main-content opening tag is now handled in dashboard.php for proper layout control -->
+</body>
+</html>

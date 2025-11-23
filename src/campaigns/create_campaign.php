@@ -81,16 +81,8 @@ include '../../includes/header.php';
                                     <div class="form-text">Set an end date for your fundraising campaign</div>
                                 </div>
 
-                                <!-- Campaign Image -->
-                                <div class="mb-4">
-                                    <label for="campaign_image" class="form-label fw-bold">Campaign Image *</label>
-                                    <input type="file" class="form-control" id="campaign_image" name="campaign_image" 
-                                           accept="image/*" required>
-                                    <div class="form-text">Upload a compelling image that represents your campaign (JPEG, PNG, max 5MB)</div>
-                                    <div class="mt-2">
-                                        <img id="image-preview" src="#" alt="Image preview" class="img-thumbnail d-none" style="max-height: 200px;">
-                                    </div>
-                                </div>
+                                <!-- Campaign Image (removed, now set by category) -->
+                                <!-- Image is now automatically set based on category. -->
 
                                 <!-- Additional Details -->
                                 <div class="mb-4">
@@ -151,12 +143,9 @@ include '../../includes/header.php';
                                 <h6><i class="fas fa-lightbulb me-2 text-warning"></i>Compelling Title</h6>
                                 <small class="text-muted">Create a clear, emotional title that explains what you're raising funds for.</small>
                             </div>
+                            <!-- Removed image tip: Images are now set by category. -->
                             <div class="mb-3">
-                                <h6><i class="fas fa-camera me-2 text-success"></i>Great Images</h6>
-                                <small class="text-muted">Use high-quality, emotional photos that tell your story.</small>
-                            </div>
-                            <div class="mb-3">
-                                <h6><i class="fas fa-target me-2 text-primary"></i>Realistic Goals</h6>
+                                <h6>🎯 <i class="fas fa-target me-2 text-primary"></i>Realistic Goals</h6>
                                 <small class="text-muted">Set achievable funding targets based on actual needs.</small>
                             </div>
                             <div class="mb-3">
@@ -190,21 +179,7 @@ include '../../includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Image preview
-    const imageInput = document.getElementById('campaign_image');
-    const imagePreview = document.getElementById('image-preview');
-
-    imageInput.addEventListener('change', function() {
-        const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.src = e.target.result;
-                imagePreview.classList.remove('d-none');
-            }
-            reader.readAsDataURL(file);
-        }
-    });
+    // Image preview removed: image is set by category.
 
     // Form submission
     document.getElementById('create-campaign-form').addEventListener('submit', function(e) {
@@ -216,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const category = document.getElementById('category').value;
         const targetAmount = document.getElementById('target_amount').value;
         const deadline = document.getElementById('deadline').value;
-        const campaignImage = document.getElementById('campaign_image').files[0];
+        // Image is set by category, no upload needed.
         const terms = document.getElementById('campaign_terms').checked;
         
         // Validation checks
@@ -245,10 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        if (!campaignImage) {
-            alert('Please upload a campaign image');
-            return;
-        }
+        // No campaign image upload required.
         
         if (!terms) {
             alert('Please agree to the terms and conditions');

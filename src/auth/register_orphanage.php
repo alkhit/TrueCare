@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <title>Register Orphanage</title>
     <link rel="stylesheet" href="../../assets/css/style.css">
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
+    <!-- Google Maps autocomplete removed for manual address entry -->
 </head>
 <body>
 <?php include '../../includes/header.php'; ?>

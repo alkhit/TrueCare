@@ -1,4 +1,4 @@
-<?php 
+<?php
 // Start session first
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -42,7 +42,7 @@ include __DIR__ . '/includes/header.php';
                         <div class="alert alert-success"><?php echo $success; ?></div>
                     <?php endif; ?>
 
-                    <form id="login-form" method="POST">
+                    <form id="login-form" method="POST" action="src/auth/login_process.php">
                         <div class="mb-3">
                             <label for="email" class="form-label">Email Address</label>
                             <div class="input-group">
@@ -83,21 +83,6 @@ include __DIR__ . '/includes/header.php';
                         </p>
                     </div>
 
-                    <!-- Demo Accounts -->
-                    <div class="mt-4 p-3 bg-light rounded">
-                        <h6 class="mb-3">Demo Accounts:</h6>
-                        <div class="row">
-                            <div class="col-12 mb-2">
-                                <small><strong>Admin:</strong> admin@truecare.org / password123</small>
-                            </div>
-                            <div class="col-12 mb-2">
-                                <small><strong>Orphanage:</strong> orphanage@truecare.org / password123</small>
-                            </div>
-                            <div class="col-12">
-                                <small><strong>Donor:</strong> donor@truecare.org / password123</small>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

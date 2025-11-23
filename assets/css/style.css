@@ -1,68 +1,160 @@
-/* Main theme colors */
+/* Main theme colors - ORIGINAL COLORS */
 body {
     background: #f8f9fa;
-    color: #222;
+    color: #333;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
 }
+
+body.has-sidebar {
+    overflow-x: hidden;
+}
+
+/* Bootstrap default primary color */
 .bg-primary {
-    background-color: #1a365f !important;
+    background-color: #007bff !important;
 }
 .text-primary {
-    color: #1a365f !important;
+    color: #007bff !important;
 }
 .btn-success {
-    background: linear-gradient(135deg, #28a745, #218838);
-    border: none;
-    color: #fff;
+    background-color: #28a745;
+    border-color: #28a745;
 }
 .btn-success:hover {
-    background: linear-gradient(135deg, #218838, #145a32);
-    color: #fff;
-    transform: translateY(-1px);
+    background-color: #218838;
+    border-color: #1e7e34;
 }
+
+/* Sidebar Styles - FIXED POSITIONING */
 .sidebar {
-    background: linear-gradient(135deg, #1a365f, #2c5aa0) !important;
+    background: #343a40 !important;
     color: #fff;
+    min-height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    overflow-y: auto;
+    transform: translateX(0);
 }
 .sidebar .nav-link, .sidebar .nav-link i {
     color: #fff !important;
+    transition: all 0.3s ease;
+}
+.sidebar .nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+.sidebar .nav-link.active {
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
 }
 .sidebar .nav-link.bg-danger {
     color: #fff !important;
 }
-.sidebar .nav-link.active {
-    background: rgba(255,255,255,0.1);
-    border-radius: 8px;
+
+/* Main Content Area - FIXED MARGIN */
+.main-content {
+    min-height: 100vh;
+    transition: all 0.3s ease;
+    margin-left: auto;
+    width: calc(100% - 260px);
+    padding: 2rem;
 }
+
+/* Sidebar responsive behavior */
+@media (max-width: 991.98px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    .main-content {
+        margin-left: auto !important;
+        width: 100% !important;
+        padding: 1rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .sidebar {
+        transform: translateX(0) !important;
+    }
+    .main-content {
+        margin-left: auto;
+        width: calc(100% - 260px);
+    }
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-btn {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1100;
+    background: #343a40;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    font-size: 1.2rem;
+}
+@media (max-width: 991.98px) {
+    .sidebar-toggle-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+@media (max-width: 991.98px) {
+    .sidebar-overlay.show {
+        display: block;
+    }
+}
+
+/* Card Styles */
 .card {
     border: none;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.08);
 }
+
+/* Button Styles - ORIGINAL COLORS */
 .btn-danger {
-    background: linear-gradient(135deg, #d32f2f, #b71c1c);
-    border: none;
-    color: #fff;
-    box-shadow: 0 2px 4px rgba(211,47,47,0.08);
-    padding: 0.5rem 1.5rem;
-    border-radius: 24px;
-    font-weight: 500;
-    letter-spacing: 0.5px;
+    background-color: #dc3545;
+    border-color: #dc3545;
 }
 .btn-danger:hover {
-    background: linear-gradient(135deg, #b71c1c, #d32f2f);
-    color: #fff;
-    transform: translateY(-1px);
+    background-color: #c82333;
+    border-color: #bd2130;
 }
 .btn-outline-danger {
-    border-color: #d32f2f;
-    color: #d32f2f;
-    background: #fff;
-    border-radius: 24px;
-    font-weight: 500;
+    border-color: #dc3545;
+    color: #dc3545;
 }
 .btn-outline-danger:hover {
-    background: #d32f2f;
-    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
 }
 .btn-outline-light {
     border-radius: 24px;
@@ -72,8 +164,10 @@ body {
     min-width: 120px;
     font-size: 1rem;
 }
+
+/* Utility Classes */
 .gap-2 > * {
-    margin-right: 0.5rem;
+    margin-right: auto;
 }
 .gap-2 > *:last-child {
     margin-right: 0;
@@ -85,154 +179,32 @@ body {
     border-radius: 50rem !important;
 }
 .shadow-sm {
-    box-shadow: 0 2px 4px rgba(44,90,160,0.08) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
 }
 .mb-4 {
-    margin-bottom: 1.5rem !important;
+    margin-bottom: auto !important;
 }
 .mt-4 {
-    margin-top: 1.5rem !important;
-}
-.px-md-4 {
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
-}
-.container-fluid {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    margin-top: auto !important;
 }
 
-/* Sidebar responsive toggle */
-@media (max-width: 991.98px) {
-  .sidebar {
-    position: fixed !important;
-    left: -260px;
-    top: 0;
-    height: 100vh;
-    width: 260px;
-    z-index: 1050;
-    transition: left 0.3s;
-    box-shadow: 0 0 20px rgba(44,90,160,0.15);
-  }
-  .sidebar.show {
-    left: 0;
-  }
-  .sidebar-toggle-btn {
-    display: block !important;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 1100;
-    background: #1a365f;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    box-shadow: 0 2px 8px rgba(44,90,160,0.12);
-    font-size: 1.5rem;
-  }
-}
-@media (max-width: 1199.98px) {
-  .sidebar {
-    position: static !important;
-    width: 100%;
-    height: auto;
-    box-shadow: none;
-    left: 0 !important;
-    top: 0;
-    z-index: 1050;
-    display: none;
-    margin-bottom: 1rem;
-  }
-  .sidebar.show {
-    display: block;
-  }
-  .sidebar-toggle-btn {
-    display: block !important;
-    position: static;
-    margin: 1rem 0 0 1rem;
-    background: #1a365f;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    box-shadow: 0 2px 8px rgba(44,90,160,0.12);
-    font-size: 1.5rem;
-  }
-}
-@media (min-width: 1200px) {
-  .sidebar-toggle-btn {
-    display: none !important;
-  }
-  .sidebar {
-    display: block !important;
-    position: static !important;
-    height: auto;
-    width: 100%;
-    box-shadow: none;
-    left: 0 !important;
-  }
+/* Toast Styles */
+.truecare-toast {
+    z-index: 9999;
 }
 
-/* Sidebar overlay for mobile/small screens */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(30, 54, 95, 0.5);
-  z-index: 1049;
-}
-@media (max-width: 1199.98px) {
-  .sidebar-overlay.show {
-    display: block;
-  }
+/* Ensure body doesn't scroll when sidebar is open on mobile */
+body.sidebar-open {
+    overflow: hidden;
 }
 
-/* Top menu for mobile/small screens */
-@media (max-width: 1199.98px) {
-  .sidebar {
-    position: static !important;
-    width: 100%;
-    height: auto;
-    box-shadow: none;
-    left: 0 !important;
-    top: 0;
-    z-index: 1050;
-    display: none;
-    margin-bottom: 1rem;
-  }
-  .sidebar.show {
-    display: block;
-  }
-  .sidebar-toggle-btn {
-    display: block !important;
-    position: static;
-    margin: 1rem 0 0 1rem;
-    background: #1a365f;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    box-shadow: 0 2px 8px rgba(44,90,160,0.12);
-    font-size: 1.5rem;
-  }
+/* Navbar specific styles */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-@media (min-width: 1200px) {
-  .sidebar-toggle-btn {
-    display: none !important;
-  }
-  .sidebar {
-    display: block !important;
-    position: static !important;
-    height: auto;
-    width: 100%;
-    box-shadow: none;
-    left: 0 !important;
-  }
+
+/* Remove container-fluid padding when sidebar is present */
+body.has-sidebar .container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }

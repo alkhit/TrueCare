@@ -1,0 +1,35 @@
+/* Sidebar adjustments */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 1030;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: relative;
+        height: auto;
+        border-right: none;
+    }
+}
+
+/* Featured campaigns adjustments */
+.featured-campaigns .card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.featured-campaigns .card:hover {
+    transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: relative;
+        height: auto;
+    }
+}

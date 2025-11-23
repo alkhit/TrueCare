@@ -1,3 +1,5 @@
+
+<?php
 require_once __DIR__ . '/../../../includes/functions.php';
 if (!function_exists('formatCurrency')) {
     function formatCurrency($amount) {
@@ -7,7 +9,6 @@ if (!function_exists('formatCurrency')) {
         return 'Ksh ' . number_format($amount);
     }
 }
-<?php
 // Ensure we have the dashboard data
 $data = $dashboard_data ?? [];
 $total_donated = $data['total_donated'] ?? 0;
@@ -145,42 +146,56 @@ $campaigns_supported = $data['campaigns_supported'] ?? 0;
                 <a href="<?php echo abs_path('src/campaigns/campaigns.php'); ?>" class="btn btn-sm btn-primary">View All</a>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <?php for($i = 1; $i <= 2; $i++): ?>
-                    <div class="col-lg-6 mb-4">
-                        <div class="card h-100">
-                            <img src="<?php echo abs_path('assets/images/campaign' . $i . '.jpg'); ?>"
-                                class="card-img-top" alt="Campaign" height="200" style="object-fit: cover;">
-                            <div class="card-body d-flex flex-column">
-                                <span class="badge bg-success mb-2">Education</span>
-                                <h6 class="card-title">Education Support #<?php echo $i; ?></h6>
-                                <p class="card-text flex-grow-1 small">Providing quality education for orphans in need of support...</p>
-                                
-                                <div class="mb-3">
-                                    <div class="progress mb-2" style="height: 6px;">
-                                        <div class="progress-bar bg-success" style="width: <?php echo rand(30, 80); ?>%"></div>
+                <div class="row row-cols-1 row-cols-md-2 g-3 justify-content-center">
+                <?php
+                $featuredStmt = $db->query("SELECT campaign_id, title, description, category, target_amount, current_amount, deadline FROM campaigns WHERE status='active' ORDER BY created_at DESC LIMIT 2");
+                $featuredCampaigns = $featuredStmt ? $featuredStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+                if (count($featuredCampaigns) === 0): ?>
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No campaigns available at the moment.</h5>
+                    </div>
+                <?php else:
+                    foreach ($featuredCampaigns as $campaign):
+                        $category = isset($campaign['category']) && !empty($campaign['category']) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category'])) : 'default';
+                        $image_path = abs_path('assets/images/campaigns/' . $category . '.jpg');
+                        if (!file_exists($image_path)) {
+                            $image_path = abs_path('assets/images/campaigns/default.jpg');
+                        }
+                        $progress = $campaign['target_amount'] > 0 ? ($campaign['current_amount'] / $campaign['target_amount']) * 100 : 0;
+                        $progress_class = $progress >= 80 ? 'bg-success' : ($progress >= 50 ? 'bg-info' : 'bg-warning');
+                        $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
+                ?>
+                    <div class="col d-flex align-items-stretch">
+                        <div class="card h-100 d-flex flex-column border-0 shadow-sm amazon-card">
+                            <div class="position-relative text-center bg-white" style="padding-top:8px;">
+                                <img src="<?php echo $image_path; ?>" class="card-img-top mx-auto" alt="<?php echo htmlspecialchars($campaign['title']); ?>" style="height: 260px; width: 98%; object-fit:cover; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.10);" onerror="this.onerror=null;this.src='<?php echo abs_path('assets/images/campaigns/default.jpg'); ?>';">
+                                <span class="badge bg-success text-capitalize position-absolute top-0 start-0 m-2" style="font-size:1em;"> <?php echo htmlspecialchars(ucfirst($campaign['category'])); ?> </span>
+                                <span class="badge <?php echo $days_left <= 7 ? 'bg-danger' : 'bg-warning'; ?> position-absolute top-0 end-0 m-2" style="font-size:1em;"> <i class="fas fa-clock me-1"></i><?php echo $days_left > 0 ? $days_left . ' days left' : 'Ended'; ?> </span>
+                            </div>
+                            <div class="card-body d-flex flex-column px-3 pb-3 pt-2">
+                                <h6 class="card-title fw-bold mb-1 text-dark text-truncate" title="<?php echo htmlspecialchars($campaign['title']); ?>"><?php echo htmlspecialchars($campaign['title']); ?></h6>
+                                <p class="card-text text-muted flex-grow-1 mb-2" style="min-height: 40px; font-size:0.97em;"> <?php echo htmlspecialchars($campaign['description']); ?> </p>
+                                <div class="mb-2">
+                                    <div class="progress mb-1" style="height: 7px;">
+                                        <div class="progress-bar <?php echo $progress_class; ?>" style="width: <?php echo min($progress, 100); ?>%"></div>
                                     </div>
-                                    <div class="d-flex justify-content-between small text-muted">
-                                        <span><?php echo rand(30, 80); ?>% funded</span>
-                                        <span>Ksh <?php echo number_format(rand(30000, 80000)); ?></span>
+                                    <div class="d-flex justify-content-between small text-muted" style="font-size:0.95em;">
+                                        <span><?php echo number_format($progress, 1); ?>% funded</span>
+                                        <span>Ksh <?php echo number_format($campaign['current_amount']); ?> of Ksh <?php echo number_format($campaign['target_amount']); ?></span>
                                     </div>
                                 </div>
-                                
-                                <div class="mt-auto">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock me-1"></i>
-                                            <?php echo rand(5, 30); ?> days left
-                                        </small>
-                                        <a href="<?php echo abs_path('src/campaigns/campaign_detail.php?id=' . $i); ?>" class="btn btn-success btn-sm">
-                                            <i class="fas fa-eye me-1"></i>View
-                                        </a>
-                                    </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <a href="<?php echo abs_path('src/campaigns/campaign_detail.php?id=' . $campaign['campaign_id']); ?>" class="btn btn-warning btn-sm px-3 w-100" style="font-weight:500;">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <?php endfor; ?>
+                <?php endforeach;
+                endif; ?>
+                </div>
                 </div>
             </div>
         </div>

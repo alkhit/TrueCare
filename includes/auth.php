@@ -1,15 +1,7 @@
 <?php
 // Authentication and user helpers for TrueCare
 
-// Check if user is logged in
-function isLoggedIn() {
-    return isset($_SESSION['user_id']);
-}
 
-// Get current user's role
-function getUserRole() {
-    return $_SESSION['user_role'] ?? null;
-}
 
 // Get current user's ID
 function getUserId() {

@@ -6,6 +6,36 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'orphanage') {
 }
 include '../../includes/config.php';
 include '../../includes/header.php';
+
+// Get user ID from session
+$user_id = $_SESSION['user_id'] ?? null;
+
+// Get orphanage ID from user ID
+$stmt = $db->prepare("SELECT orphanage_id FROM orphanages WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$orphanage = $stmt->fetch(PDO::FETCH_ASSOC);
+$orphanage_id = $orphanage['orphanage_id'] ?? null;
+
+// Fetch campaigns for this orphanage
+if ($orphanage_id) {
+    $stmt = $db->prepare("SELECT campaign_id, title, description, category, target_amount, current_amount, status, deadline, created_at FROM campaigns WHERE orphanage_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$orphanage_id]);
+    $myCampaigns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $myCampaigns = [];
+}
+
+// Calculate stats
+$total_campaigns = count($myCampaigns);
+$active_campaigns = 0;
+$total_raised = 0;
+
+foreach ($myCampaigns as $campaign) {
+    if ($campaign['status'] === 'active') {
+        $active_campaigns++;
+    }
+    $total_raised += $campaign['current_amount'];
+}
 ?>
 
 <div class="container-fluid">
@@ -16,12 +46,105 @@ include '../../includes/header.php';
         </nav>
 
         <!-- Main content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                        <!-- Success Modal -->
+                        <div class="modal fade" id="campaignSuccessModal" tabindex="-1" aria-labelledby="campaignSuccessLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="campaignSuccessLabel">Campaign Created</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Your campaign has been created successfully!</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">My Campaigns</h1>
-                <a href="create_campaign.php" class="btn btn-success">
-                    <i class="fas fa-plus-circle me-2"></i>Create New Campaign
-                </a>
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+                                        <i class="fas fa-plus-circle me-2"></i>Create New Campaign
+                                </button>
+
+                                <!-- Create Campaign Modal -->
+                                <div class="modal fade" id="createCampaignModal" tabindex="-1" aria-labelledby="createCampaignLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form id="createCampaignForm">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="createCampaignLabel">Create New Campaign</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="title" class="form-label">Title</label>
+                                                        <input type="text" class="form-control" id="title" name="title" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="description" class="form-label">Description</label>
+                                                        <textarea class="form-control" id="description" name="description" required></textarea>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="category" class="form-label">Category</label>
+                                                        <select class="form-select" id="category" name="category" required>
+                                                            <option value="education">Education</option>
+                                                            <option value="medical">Medical</option>
+                                                            <option value="food">Food</option>
+                                                            <option value="shelter">Shelter</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="target_amount" class="form-label">Target Amount (Ksh)</label>
+                                                        <input type="number" class="form-control" id="target_amount" name="target_amount" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="deadline" class="form-label">Deadline</label>
+                                                        <input type="date" class="form-control" id="deadline" name="deadline" required>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-success">Create</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                        <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            var form = document.getElementById('createCampaignForm');
+                            if (form) {
+                                form.addEventListener('submit', function(e) {
+                                    e.preventDefault();
+                                    var formData = new FormData(form);
+                                    fetch('create_campaign.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            var createModal = bootstrap.Modal.getInstance(document.getElementById('createCampaignModal'));
+                                            createModal.hide();
+                                            var successModal = new bootstrap.Modal(document.getElementById('campaignSuccessModal'));
+                                            successModal.show();
+                                            form.reset();
+                                            // Optionally, reload campaigns list via AJAX here
+                                        } else {
+                                            alert(data.message || 'Error creating campaign.');
+                                        }
+                                    })
+                                    .catch(() => {
+                                        alert('Error creating campaign.');
+                                    });
+                                });
+                            }
+                        });
+                        </script>
             </div>
 
             <!-- Stats Cards -->
@@ -33,7 +156,7 @@ include '../../includes/header.php';
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                         Total Campaigns</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800">3</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_campaigns; ?></div>
                                 </div>
                                 <div class="col-auto">
                                     <i class="fas fa-hand-holding-heart fa-2x text-gray-300"></i>
@@ -49,11 +172,11 @@ include '../../includes/header.php';
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                        Total Raised</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800">Ksh 110,000</div>
+                                        Active Campaigns</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $active_campaigns; ?></div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                                    <i class="fas fa-chart-line fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -66,11 +189,11 @@ include '../../includes/header.php';
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                        Active Campaigns</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800">2</div>
+                                        Total Raised</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">Ksh <?php echo number_format($total_raised, 2); ?></div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                    <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -83,11 +206,13 @@ include '../../includes/header.php';
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                        Total Donors</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800">42</div>
+                                        Completion Rate</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        <?php echo $total_campaigns > 0 ? round(($active_campaigns / $total_campaigns) * 100) : 0; ?>%
+                                    </div>
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                    <i class="fas fa-percentage fa-2x text-gray-300"></i>
                                 </div>
                             </div>
                         </div>
@@ -116,110 +241,116 @@ include '../../includes/header.php';
                                     <th>Goal</th>
                                     <th>Raised</th>
                                     <th>Progress</th>
-                                    <th>Donors</th>
                                     <th>Status</th>
+                                    <th>Deadline</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php
-                                $campaigns = [
-                                    [
-                                        'id' => 1,
-                                        'title' => 'Education for Orphans',
-                                        'category' => 'Education',
-                                        'goal' => 100000,
-                                        'raised' => 65000,
-                                        'donors' => 24,
-                                        'status' => 'active',
-                                        'days_left' => 15,
-                                        'image' => 'campaign1.jpg'
-                                    ],
-                                    [
-                                        'id' => 2,
-                                        'title' => 'Medical Supplies',
-                                        'category' => 'Medical',
-                                        'goal' => 150000,
-                                        'raised' => 45000,
-                                        'donors' => 18,
-                                        'status' => 'active',
-                                        'days_left' => 30,
-                                        'image' => 'campaign2.jpg'
-                                    ],
-                                    [
-                                        'id' => 3,
-                                        'title' => 'Food and Shelter',
-                                        'category' => 'Food',
-                                        'goal' => 200000,
-                                        'raised' => 0,
-                                        'donors' => 0,
-                                        'status' => 'draft',
-                                        'days_left' => 0,
-                                        'image' => 'campaign3.jpg'
-                                    ]
-                                ];
-
-                                foreach ($campaigns as $campaign):
-                                    $progress = ($campaign['raised'] / $campaign['goal']) * 100;
-                                    $status_class = [
-                                        'active' => 'success',
-                                        'completed' => 'primary',
-                                        'draft' => 'secondary'
-                                    ][$campaign['status']];
-                                ?>
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <img src="../../assets/images/<?php echo $campaign['image']; ?>" 
-                                                 class="rounded me-3" width="60" height="60" style="object-fit: cover;">
-                                            <div>
-                                                <h6 class="mb-0"><?php echo $campaign['title']; ?></h6>
-                                                <?php if ($campaign['status'] === 'active'): ?>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-clock me-1"></i>
-                                                    <?php echo $campaign['days_left']; ?> days left
-                                                </small>
-                                                <?php endif; ?>
+                                <?php if (count($myCampaigns) === 0): ?>
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5">
+                                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No campaigns found</p>
+                                            <a href="create_campaign.php" class="btn btn-primary">
+                                                <i class="fas fa-plus me-2"></i>Create Your First Campaign
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($myCampaigns as $campaign): 
+                                        $progress = $campaign['target_amount'] > 0 ? ($campaign['current_amount'] / $campaign['target_amount']) * 100 : 0;
+                                        $status_class = [
+                                            'active' => 'success',
+                                            'completed' => 'primary',
+                                            'draft' => 'secondary',
+                                            'cancelled' => 'danger'
+                                        ][$campaign['status'] ?? 'draft'];
+                                        
+                                        // Calculate days left
+                                        $days_left = 'N/A';
+                                        if ($campaign['deadline'] && $campaign['status'] === 'active') {
+                                            $deadline = new DateTime($campaign['deadline']);
+                                            $today = new DateTime();
+                                            $interval = $today->diff($deadline);
+                                            $days_left = $interval->days;
+                                            if ($interval->invert) {
+                                                $days_left = 'Expired';
+                                            }
+                                        }
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <?php
+                                                $category = isset($campaign['category']) && !empty($campaign['category']) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category'])) : 'default';
+                                                $image_path = "../../assets/images/campaigns/{$category}.jpg";
+                                                if (!file_exists($image_path)) {
+                                                    $image_path = "../../assets/images/campaigns/default.jpg";
+                                                }
+                                                ?>
+                                                <img src="<?php echo $image_path; ?>" class="rounded me-3" width="60" height="60" style="object-fit: cover;">
+                                                <div>
+                                                    <h6 class="mb-0"><?php echo htmlspecialchars($campaign['title']); ?></h6>
+                                                    <small class="text-muted">
+                                                        <?php echo strlen($campaign['description']) > 50 ? substr($campaign['description'], 0, 50) . '...' : $campaign['description']; ?>
+                                                    </small>
+                                                    <?php if ($campaign['status'] === 'active' && $days_left !== 'N/A' && $days_left !== 'Expired'): ?>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        <?php echo $days_left; ?> days left
+                                                    </small>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark"><?php echo $campaign['category']; ?></span>
-                                    </td>
-                                    <td>Ksh <?php echo number_format($campaign['goal']); ?></td>
-                                    <td>Ksh <?php echo number_format($campaign['raised']); ?></td>
-                                    <td>
-                                        <div class="progress" style="height: 6px; width: 100px;">
-                                            <div class="progress-bar bg-<?php echo $status_class; ?>" 
-                                                 style="width: <?php echo $progress; ?>%"></div>
-                                        </div>
-                                        <small><?php echo number_format($progress, 1); ?>%</small>
-                                    </td>
-                                    <td><?php echo $campaign['donors']; ?></td>
-                                    <td>
-                                        <span class="badge bg-<?php echo $status_class; ?>">
-                                            <?php echo ucfirst($campaign['status']); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="campaign_detail.php?id=<?php echo $campaign['id']; ?>" 
-                                               class="btn btn-outline-primary" title="View">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="edit_campaign.php?id=<?php echo $campaign['id']; ?>" class="btn btn-outline-success" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="analytics_campaign.php?id=<?php echo $campaign['id']; ?>" class="btn btn-outline-info" title="Analytics">
-                                                <i class="fas fa-chart-bar"></i>
-                                            </a>
-                                            <a href="delete_campaign.php?id=<?php echo $campaign['id']; ?>" class="btn btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this campaign?');">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark text-capitalize">
+                                                <?php echo $campaign['category']; ?>
+                                            </span>
+                                        </td>
+                                        <td>Ksh <?php echo number_format($campaign['target_amount'], 2); ?></td>
+                                        <td>Ksh <?php echo number_format($campaign['current_amount'], 2); ?></td>
+                                        <td>
+                                            <div class="progress" style="height: 6px; width: 100px;">
+                                                <div class="progress-bar bg-<?php echo $status_class; ?>" 
+                                                     style="width: <?php echo min($progress, 100); ?>%"></div>
+                                            </div>
+                                            <small><?php echo number_format($progress, 1); ?>%</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-<?php echo $status_class; ?> text-capitalize">
+                                                <?php echo $campaign['status']; ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php echo $campaign['deadline'] ? date('M j, Y', strtotime($campaign['deadline'])) : 'Not set'; ?>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="campaign_detail.php?id=<?php echo $campaign['campaign_id']; ?>" 
+                                                   class="btn btn-outline-primary" title="View">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="edit_campaign.php?id=<?php echo $campaign['campaign_id']; ?>" 
+                                                   class="btn btn-outline-success" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="analytics_campaign.php?id=<?php echo $campaign['campaign_id']; ?>" 
+                                                   class="btn btn-outline-info" title="Analytics">
+                                                    <i class="fas fa-chart-bar"></i>
+                                                </a>
+                                                <a href="delete_campaign.php?id=<?php echo $campaign['campaign_id']; ?>" 
+                                                   class="btn btn-outline-danger" title="Delete" 
+                                                   onclick="return confirm('Are you sure you want to delete this campaign?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>

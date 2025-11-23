@@ -32,12 +32,14 @@ if ($orphanage_id) {
 
 include '../../includes/header.php';
 ?>
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-md-3 col-lg-2 d-none d-md-block">
-            <?php include '../auth/sidebar.php'; ?>
-        </div>
-        <main class="col-12 col-md-9 col-lg-10 px-md-4">
+<div class="row">
+    <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+        <?php include '../auth/sidebar.php'; ?>
+    </nav>
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="container-fluid mt-4">
+            <div class="row">
+                <div class="col-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h4 class="m-0 fw-bold text-primary">Donations Received</h4>

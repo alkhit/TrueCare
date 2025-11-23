@@ -9,38 +9,17 @@ $campaign_id = $_GET['id'] ?? 1;
 include '../../includes/config.php';
 include '../../includes/header.php';
 
-// Mock campaign data
-$campaigns = [
-    1 => [
-        'title' => 'Education for Orphans', 
-        'description' => 'Help provide quality education for 50 orphans in Nairobi. This campaign aims to cover school fees, educational materials, uniforms, and other essential learning resources for one academic year.',
-        'target' => 100000,
-        'raised' => 65000,
-        'image' => 'campaign1.jpg',
-        'category' => 'Education',
-        'orphanage' => 'Hope Children Center',
-        'location' => 'Nairobi, Kenya',
-        'deadline' => '2024-12-31',
-        'created' => '2024-01-15',
-        'donors' => 24
-    ],
-    2 => [
-        'title' => 'Medical Supplies', 
-        'description' => 'Urgent need for medical supplies and healthcare services for orphans. This will cover vaccinations, routine checkups, and essential medications.',
-        'target' => 150000,
-        'raised' => 45000,
-        'image' => 'campaign2.jpg',
-        'category' => 'Medical',
-        'orphanage' => 'Grace Orphanage',
-        'location' => 'Mombasa, Kenya',
-        'deadline' => '2024-11-30',
-        'created' => '2024-02-01',
-        'donors' => 18
-    ]
-];
-
-$campaign = $campaigns[$campaign_id] ?? $campaigns[1];
-$progress = ($campaign['raised'] / $campaign['target']) * 100;
+// Fetch campaign details from database
+$stmt = $db->prepare("SELECT c.*, o.name AS orphanage_name, o.location AS orphanage_location FROM campaigns c LEFT JOIN orphanages o ON c.orphanage_id = o.orphanage_id WHERE c.campaign_id = :id");
+$stmt->bindParam(':id', $campaign_id);
+$stmt->execute();
+$campaign = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$campaign) {
+    echo '<div class="container py-5"><div class="alert alert-danger">Campaign not found.</div></div>';
+    include '../../includes/footer.php';
+    exit;
+}
+$progress = ($campaign['current_amount'] / $campaign['target_amount']) * 100;
 $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
 ?>
 
@@ -70,7 +49,14 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                 <div class="col-lg-8">
                     <!-- Campaign Image -->
                     <div class="card shadow mb-4">
-                        <img src="../../assets/images/<?php echo $campaign['image']; ?>" class="card-img-top" alt="Campaign" style="max-height: 400px; object-fit: cover;">
+                        <?php
+                        $category = isset($campaign['category']) && !empty($campaign['category']) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category'])) : 'default';
+                        $image_path = "../../assets/images/campaigns/{$category}.jpg";
+                        if (!file_exists($image_path)) {
+                            $image_path = "../../assets/images/campaigns/default.jpg";
+                        }
+                        ?>
+                        <img src="<?php echo $image_path; ?>" class="card-img-top" alt="Campaign" style="max-height: 400px; object-fit: cover;">
                     </div>
 
                     <!-- Campaign Details -->
@@ -95,41 +81,7 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                         </div>
                     </div>
 
-                    <!-- Updates -->
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                            <h5 class="m-0 font-weight-bold text-primary">Campaign Updates</h5>
-                            <span class="badge bg-primary">2 Updates</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="timeline">
-                                <div class="timeline-item mb-4">
-                                    <div class="timeline-badge bg-success"></div>
-                                    <div class="timeline-panel">
-                                        <div class="timeline-heading">
-                                            <h6 class="timeline-title">Campaign Launched</h6>
-                                            <small class="text-muted"><i class="fas fa-clock me-1"></i><?php echo $campaign['created']; ?></small>
-                                        </div>
-                                        <div class="timeline-body">
-                                            <p>We've officially launched our campaign to support education for orphans. Thank you for considering to be part of this journey!</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="timeline-item">
-                                    <div class="timeline-badge bg-info"></div>
-                                    <div class="timeline-panel">
-                                        <div class="timeline-heading">
-                                            <h6 class="timeline-title">First Milestone Reached</h6>
-                                            <small class="text-muted"><i class="fas fa-clock me-1"></i>2 weeks ago</small>
-                                        </div>
-                                        <div class="timeline-body">
-                                            <p>We've reached 30% of our goal! Thank you to all our early supporters. Your contributions are already making a difference.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Updates section removed -->
                 </div>
 
                 <div class="col-lg-4">
@@ -149,8 +101,8 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                                     <div class="progress-bar bg-success" style="width: <?php echo $progress; ?>%"></div>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <strong>Ksh <?php echo number_format($campaign['raised']); ?></strong>
-                                    <strong>Ksh <?php echo number_format($campaign['target']); ?></strong>
+                                    <strong>Ksh <?php echo number_format(isset($campaign['raised']) ? $campaign['raised'] : 0); ?></strong>
+                                    <strong>Ksh <?php echo number_format(isset($campaign['target']) ? $campaign['target'] : 0); ?></strong>
                                 </div>
                             </div>
 
@@ -158,7 +110,7 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                             <div class="row text-center mb-4">
                                 <div class="col-4">
                                     <div class="border rounded p-2">
-                                        <h6 class="mb-0 text-success"><?php echo $campaign['donors']; ?></h6>
+                                        <h6 class="mb-0 text-success"><?php echo isset($campaign['donors']) ? $campaign['donors'] : 0; ?></h6>
                                         <small class="text-muted">Donors</small>
                                     </div>
                                 </div>
@@ -169,9 +121,11 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                                     </div>
                                 </div>
                                 <div class="col-4">
-                                    <div class="border rounded p-2">
-                                        <h6 class="mb-0 text-info"><?php echo $campaign['category']; ?></h6>
-                                        <small class="text-muted">Category</small>
+                                    <div class="border rounded p-2 bg-light d-flex flex-column align-items-center justify-content-center" style="min-height: 70px;">
+                                        <span class="badge bg-primary text-uppercase px-2 py-1" style="font-size: 0.85em; letter-spacing: 0.5px; white-space: nowrap;">
+                                            <i class="fas fa-tag me-1"></i><?php echo htmlspecialchars($campaign['category']); ?>
+                                        </span>
+                                        <small class="d-block mt-1 text-muted" style="font-size: 0.85em;">Category</small>
                                     </div>
                                 </div>
                             </div>
@@ -230,10 +184,10 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                             <div class="d-flex align-items-center">
                                 <img src="../../assets/images/orphanage.png" alt="Orphanage" class="rounded-circle me-3" width="50">
                                 <div>
-                                    <h6 class="mb-0"><?php echo $campaign['orphanage']; ?></h6>
+                                    <h6 class="mb-0"><?php echo htmlspecialchars($campaign['orphanage_name']); ?></h6>
                                     <small class="text-muted">
                                         <i class="fas fa-map-marker-alt me-1"></i>
-                                        <?php echo $campaign['location']; ?>
+                                        <?php echo htmlspecialchars($campaign['orphanage_location']); ?>
                                     </small>
                                 </div>
                             </div>

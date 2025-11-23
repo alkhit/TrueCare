@@ -20,27 +20,11 @@ if ($title === '' || $description === '' || $category === '' || $target_amount <
     exit;
 }
 
-// Handle image upload
-$image_path = '';
-if (isset($_FILES['campaign_image']) && $_FILES['campaign_image']['error'] === UPLOAD_ERR_OK) {
-    $img = $_FILES['campaign_image'];
-    $ext = strtolower(pathinfo($img['name'], PATHINFO_EXTENSION));
-    $allowed = ['jpg', 'jpeg', 'png'];
-    if (!in_array($ext, $allowed)) {
-        echo showAlert('danger', 'Invalid image format. Only JPG, JPEG, PNG allowed.');
-        exit;
-    }
-    if ($img['size'] > 5 * 1024 * 1024) {
-        echo showAlert('danger', 'Image size exceeds 5MB.');
-        exit;
-    }
-    $image_name = uniqid('cmp_') . '.' . $ext;
-    $image_path = '../../assets/images/campaigns/' . $image_name;
-    $absolute_path = __DIR__ . '/../../assets/images/campaigns/' . $image_name;
-    if (!move_uploaded_file($img['tmp_name'], $absolute_path)) {
-        echo showAlert('danger', 'Failed to upload image.');
-        exit;
-    }
+// Set image path based on category
+$category_safe = !empty($category) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $category)) : 'default';
+$image_path = '../../assets/images/campaigns/' . $category_safe . '.jpg';
+if (!file_exists($image_path)) {
+    $image_path = '../../assets/images/campaigns/default.jpg';
 }
 
 // Insert campaign

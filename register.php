@@ -36,7 +36,7 @@ include __DIR__ . '/includes/header.php';
                         <div class="alert alert-danger"><?php echo $error; ?></div>
                     <?php endif; ?>
 
-                    <form id="register-form" method="POST">
+                    <form id="register-form" method="POST" action="src/auth/register_process.php">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">

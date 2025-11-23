@@ -180,70 +180,114 @@ function getRoleTemplatePath($role) {
 }
 ?>
 
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-            <?php 
-            $sidebar_path = __DIR__ . '/sidebar.php';
-            if (file_exists($sidebar_path)) {
-                include $sidebar_path;
-            } else {
-                echo '<div class="alert alert-danger">Sidebar not found</div>';
-            }
-            ?>
-        </nav>
-
-        <!-- Main content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">
-                    <i class="fas fa-tachometer-alt me-2"></i>
-                    <?php echo ucfirst($user_role); ?> Dashboard
-                </h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group me-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-calendar me-1"></i>
-                            <?php echo date('M j, Y'); ?>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Welcome Alert -->
-            <div class="alert alert-info">
-                <h6><i class="fas fa-info-circle me-2"></i>Welcome to TrueCare!</h6>
-                <p class="mb-0">
-                    <?php echo getWelcomeMessage($user_role); ?>
-                </p>
-            </div>
-
-            <!-- Display any session messages -->
-            <?php
-            if (isset($_SESSION['success'])) {
-                echo showAlert('success', $_SESSION['success']);
-                unset($_SESSION['success']);
-            }
-            if (isset($_SESSION['error'])) {
-                echo showAlert('error', $_SESSION['error']);
-                unset($_SESSION['error']);
-            }
-            ?>
-
-            <!-- Role-specific Content -->
-            <?php 
-            $template_path = getRoleTemplatePath($user_role);
-            if ($template_path && file_exists($template_path)) {
-                include $template_path;
-            } else {
-                echo '<div class="alert alert-warning">Dashboard content is being prepared for your role.</div>';
-            }
-            ?>
-
-        </main>
+<!-- Main content area - removed the container-fluid wrapper since header already handles the main content -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt me-2"></i>
+        <?php echo ucfirst($user_role); ?> Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-calendar me-1"></i>
+                <?php echo date('M j, Y'); ?>
+            </button>
+        </div>
     </div>
 </div>
+
+<!-- Welcome Alert -->
+<div class="alert alert-info">
+    <h6><i class="fas fa-info-circle me-2"></i>Welcome to TrueCare!</h6>
+    <p class="mb-0">
+        <?php echo getWelcomeMessage($user_role); ?>
+    </p>
+</div>
+
+<!-- Display any session messages -->
+<?php
+if (isset($_SESSION['success'])) {
+    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>' . $_SESSION['success'] . '
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>';
+    unset($_SESSION['success']);
+}
+if (isset($_SESSION['error'])) {
+    echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>' . $_SESSION['error'] . '
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>';
+    unset($_SESSION['error']);
+}
+?>
+
+<!-- Sidebar -->
+<?php if (isset($_SESSION['user_id'])): ?>
+<nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+    <?php include __DIR__ . '/../auth/sidebar.php'; ?>
+</nav>
+<?php endif; ?>
+
+<!-- Featured Campaigns Section -->
+<section class="featured-campaigns py-5">
+    <div class="container">
+        <div class="row">
+            <?php
+            $featuredStmt = $db->query("SELECT campaign_id, title, description, category, target_amount, current_amount, deadline FROM campaigns WHERE status='active' ORDER BY created_at DESC LIMIT 3");
+            $featuredCampaigns = $featuredStmt ? $featuredStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            if (count($featuredCampaigns) === 0): ?>
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No campaigns available at the moment.</h5>
+                </div>
+            <?php else:
+                foreach ($featuredCampaigns as $campaign): ?>
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <?php
+                        $category = isset($campaign['category']) && !empty($campaign['category']) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category'])) : 'default';
+                        $image_path = "assets/images/campaigns/{$category}.jpg";
+                        if (!file_exists($image_path)) {
+                            $image_path = "assets/images/campaigns/default.jpg";
+                        }
+                        ?>
+                        <img src="<?php echo $image_path; ?>" class="card-img-top" alt="Campaign" style="height: 200px; object-fit: cover;" onerror="this.onerror=null;this.src='assets/images/campaigns/default.jpg';">
+                        <div class="card-body d-flex flex-column">
+                            <span class="badge bg-success mb-2"><?php echo ucfirst($campaign['category']); ?></span>
+                            <h5 class="card-title"><?php echo htmlspecialchars($campaign['title']); ?></h5>
+                            <p class="card-text flex-grow-1"><?php echo htmlspecialchars($campaign['description']); ?></p>
+                            <div class="mb-3">
+                                <div class="progress mb-2" style="height: 8px;">
+                                    <div class="progress-bar bg-success" style="width: <?php echo ($campaign['current_amount'] / $campaign['target_amount']) * 100; ?>%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span><?php echo number_format(($campaign['current_amount'] / $campaign['target_amount']) * 100, 1); ?>% funded</span>
+                                    <span>Ksh <?php echo number_format($campaign['current_amount']); ?></span>
+                                </div>
+                            </div>
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        <?php
+                                        $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
+                                        echo $days_left > 0 ? $days_left . ' days left' : 'Ended';
+                                        ?>
+                                    </small>
+                                    <a href="src/campaigns/campaign_detail.php?id=<?php echo $campaign['campaign_id']; ?>" class="btn btn-success btn-sm">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach;
+            endif; ?>
+        </div>
+    </div>
+</section>
 
 <?php 
 $footer_path = __DIR__ . '/../../includes/footer.php';
