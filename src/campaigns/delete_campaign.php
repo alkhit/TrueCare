@@ -1,6 +1,10 @@
 <?php
 require_once '../../includes/functions.php';
 require_once '../../includes/config.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 session_start();
 checkAuth('orphanage');
 

@@ -93,7 +93,7 @@ try {
             $redirect = '../../src/donor/dashboard.php';
             break;
         case 'orphanage':
-            $redirect = '../../src/orphanage/register_orphanage.php';
+            $redirect = '../../src/auth/register_orphanage.php';
             break;
         case 'admin':
             $redirect = '../../src/admin/dashboard.php';
@@ -101,22 +101,14 @@ try {
         default:
             $redirect = '../../src/auth/dashboard.php';
     }
-
-    // Ensure the redirect path exists
-    $absolute_redirect = $this->getAbsolutePath($redirect);
-    
     http_response_code(200);
-    echo json_encode([
-        'success' => true, 
-        'message' => 'Registration successful! Redirecting...', 
-        'redirect' => $redirect
-    ]);
+    header('Location: ' . $redirect);
     exit;
 
 } catch (Exception $e) {
     error_log("Register error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid details. Please check your input and try again.']);
     exit;
 }
 

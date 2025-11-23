@@ -5,28 +5,57 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Check if campaign_id is provided
-$campaign_id = $_GET['campaign_id'] ?? 1; // Default to 1 if not provided
+// Prevent orphanages from donating
+if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'orphanage') {
+    echo '<div class="alert alert-danger mt-5">Orphanage accounts cannot make donations. Only donors can donate to campaigns.</div>';
+    include '../../includes/footer.php';
+    exit;
+}
 
 include '../../includes/config.php';
+require_once '../../includes/functions.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 include '../../includes/header.php';
 
-// Mock campaign data - in real app, fetch from database
-$campaigns = [
-    1 => ['title' => 'Education for Orphans', 'target' => 100000, 'raised' => 65000],
-    2 => ['title' => 'Medical Supplies', 'target' => 150000, 'raised' => 45000],
-    3 => ['title' => 'Food and Shelter', 'target' => 200000, 'raised' => 120000]
-];
+// Fetch all active campaigns for selection
+$campaign_id = isset($_GET['campaign_id']) ? intval($_GET['campaign_id']) : null;
 
-$campaign = $campaigns[$campaign_id] ?? $campaigns[1];
+$campaigns = [];
+$stmt = $db->prepare("SELECT c.campaign_id, c.title, c.target_amount, c.current_amount, c.image_url, o.name as orphanage_name, o.location FROM campaigns c JOIN orphanages o ON c.orphanage_id = o.orphanage_id WHERE c.status = 'active' ORDER BY c.created_at DESC");
+$stmt->execute();
+$campaigns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// If no campaign_id provided, use first available
+if (!$campaign_id && count($campaigns) > 0) {
+    $campaign_id = $campaigns[0]['campaign_id'];
+}
+
+// Fetch campaign data from database using PDO
+
+
+// Find the selected campaign from the campaigns array
+$campaign = null;
+foreach ($campaigns as $c) {
+    if ($c['campaign_id'] == $campaign_id) {
+        $campaign = $c;
+        break;
+    }
+}
+
+// Fallback if campaign not found
+if (!$campaign) {
+    echo '<div class="alert alert-danger">Campaign not found or not active.</div>';
+    include '../../includes/footer.php';
+    exit;
+}
 ?>
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php include '../auth/sidebar.php'; ?>
-        </nav>
+
 
         <!-- Main content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
@@ -44,20 +73,32 @@ $campaign = $campaigns[$campaign_id] ?? $campaigns[1];
                             <h5 class="m-0 font-weight-bold text-primary">Donation Details</h5>
                         </div>
                         <div class="card-body">
+                            <!-- Campaign Selection -->
+                            <div class="mb-4">
+                                <label for="campaign_id" class="form-label fw-bold">Select Campaign</label>
+                                <select class="form-select" name="campaign_id" id="campaign_id" onchange="window.location.href='donate.php?campaign_id='+this.value;">
+                                    <?php foreach ($campaigns as $c): ?>
+                                        <option value="<?php echo $c['campaign_id']; ?>" <?php if ($c['campaign_id'] == $campaign_id) echo 'selected'; ?>>
+                                            <?php echo htmlspecialchars($c['title'] . ' (' . $c['orphanage_name'] . ')'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             <!-- Campaign Info -->
                             <div class="row mb-4">
                                 <div class="col-md-3">
-                                    <img src="../../assets/images/<?php echo $campaign['image']; ?>" class="img-fluid rounded" alt="Campaign">
+                                    <img src="<?php echo !empty($campaign['image_url']) ? '../../assets/images/' . $campaign['image_url'] : '../../assets/images/default_campaign.jpg'; ?>" class="img-fluid rounded" alt="Campaign">
                                 </div>
                                 <div class="col-md-9">
-                                    <h5><?php echo $campaign['title']; ?></h5>
+                                    <h5><?php echo htmlspecialchars($campaign['title']); ?></h5>
+                                    <div class="mb-1 text-muted small">Orphanage: <?php echo htmlspecialchars($campaign['orphanage_name']); ?> (<?php echo htmlspecialchars($campaign['location']); ?>)</div>
                                     <div class="progress mb-2" style="height: 10px;">
-                                        <div class="progress-bar bg-success" style="width: <?php echo ($campaign['raised'] / $campaign['target']) * 100; ?>%"></div>
+                                        <div class="progress-bar bg-success" style="width: <?php echo ($campaign['current_amount'] / $campaign['target_amount']) * 100; ?>%"></div>
                                     </div>
                                     <div class="d-flex justify-content-between text-sm text-muted">
-                                        <span>Ksh <?php echo number_format($campaign['raised']); ?> raised</span>
-                                        <span>Ksh <?php echo number_format($campaign['target']); ?> goal</span>
-                                        <span><?php echo number_format(($campaign['raised'] / $campaign['target']) * 100, 1); ?>% funded</span>
+                                        <span>Ksh <?php echo number_format($campaign['current_amount']); ?> raised</span>
+                                        <span>Ksh <?php echo number_format($campaign['target_amount']); ?> goal</span>
+                                        <span><?php echo number_format(($campaign['current_amount'] / $campaign['target_amount']) * 100, 1); ?>% funded</span>
                                     </div>
                                 </div>
                             </div>
@@ -112,16 +153,6 @@ $campaign = $campaigns[$campaign_id] ?? $campaigns[1];
                                                 </label>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="form-check card payment-method-card">
-                                                <input class="form-check-input" type="radio" name="payment_method" id="paypal" value="paypal">
-                                                <label class="form-check-label card-body text-center" for="paypal">
-                                                    <i class="fab fa-paypal fa-3x text-info mb-2"></i>
-                                                    <h6>PayPal</h6>
-                                                    <small class="text-muted">Online Payment</small>
-                                                </label>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -167,13 +198,6 @@ $campaign = $campaigns[$campaign_id] ?? $campaigns[1];
                                         </div>
                                     </div>
 
-                                    <!-- PayPal Details -->
-                                    <div id="paypal-details" class="payment-detail-section" style="display: none;">
-                                        <div class="alert alert-info">
-                                            <i class="fab fa-paypal me-2"></i>
-                                            You will be redirected to PayPal to complete your payment securely.
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <!-- Donation Message -->
@@ -299,6 +323,30 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(this.value + '-details').style.display = 'block';
         });
     });
+
+    // Card number autoformat (add spaces every 4 digits)
+    const cardNumberInput = document.getElementById('card-number');
+    if (cardNumberInput) {
+        cardNumberInput.addEventListener('input', function(e) {
+            let value = this.value.replace(/\D/g, '');
+            value = value.substring(0, 16);
+            let formatted = value.replace(/(.{4})/g, '$1 ');
+            this.value = formatted.trim();
+        });
+    }
+
+    // Expiry date autoformat (MM/YY)
+    const expiryInput = document.getElementById('expiry');
+    if (expiryInput) {
+        expiryInput.addEventListener('input', function(e) {
+            let value = this.value.replace(/[^\d]/g, '');
+            if (value.length > 4) value = value.substring(0, 4);
+            if (value.length >= 3) {
+                value = value.substring(0,2) + '/' + value.substring(2,4);
+            }
+            this.value = value;
+        });
+    }
 
     // Initialize with first amount
     if (amountBtns.length > 0) {

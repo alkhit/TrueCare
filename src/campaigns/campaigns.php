@@ -1,260 +1,180 @@
 <?php
 session_start();
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../../login.php");
     exit;
 }
-include '../../includes/config.php';
-include '../../includes/header.php';
+
+require_once '../../includes/config.php';
+require_once '../../includes/functions.php';
+require_once '../../includes/header.php';
+
+// Get DB connection
+$db = get_db();
 
 // Get filter parameters
-$search = $_GET['search'] ?? '';
+$search   = $_GET['search'] ?? '';
 $category = $_GET['category'] ?? '';
 $location = $_GET['location'] ?? '';
-$sort = $_GET['sort'] ?? 'newest';
+$sort     = $_GET['sort'] ?? 'newest';
+
 ?>
-
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php include '../auth/sidebar.php'; ?>
-        </nav>
-
-        <!-- Main content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Browse Campaigns</h1>
-                <div class="btn-toolbar mb-2 mb-md-0 w-100" style="max-width: 400px;">
-                    <select class="form-select form-select-lg" id="sort-select" style="min-width: 250px;">
-                        <option value="newest" <?php echo $sort === 'newest' ? 'selected' : ''; ?>>Sort by: Newest First</option>
-                        <option value="most_funded" <?php echo $sort === 'most_funded' ? 'selected' : ''; ?>>Sort by: Most Funded</option>
-                        <option value="ending_soon" <?php echo $sort === 'ending_soon' ? 'selected' : ''; ?>>Sort by: Ending Soon</option>
-                        <option value="urgent" <?php echo $sort === 'urgent' ? 'selected' : ''; ?>>Sort by: Most Urgent</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Campaigns Grid -->
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4 justify-content-center" id="campaigns-grid" style="margin-left:0;margin-right:0;">
-                <?php
-                // Fetch campaigns from database with all necessary fields
-                    $query = "SELECT campaign_id, title, description, category, target_amount, current_amount, deadline, created_at FROM campaigns WHERE status='active'";
-                
-                // Apply filtering with prepared statements
-                $params = [];
-                $conditions = [];
-                
-                if (!empty($search)) {
-                    $conditions[] = "(title LIKE ? OR description LIKE ?)";
-                    $params[] = "%$search%";
-                    $params[] = "%$search%";
-                }
-                
-                if (!empty($category) && $category !== 'all') {
-                    $conditions[] = "category = ?";
-                    $params[] = $category;
-                }
-                
-                if (!empty($location)) {
-                    $conditions[] = "location LIKE ?";
-                    $params[] = "%$location%";
-                }
-                
-                if (!empty($conditions)) {
-                    $query .= " AND " . implode(" AND ", $conditions);
-                }
-                
-                // Add sorting
-                switch ($sort) {
-                    case 'most_funded':
-                        $query .= " ORDER BY (current_amount/target_amount) DESC";
-                        break;
-                    case 'ending_soon':
-                        $query .= " ORDER BY deadline ASC";
-                        break;
-                    case 'urgent':
-                        $query .= " ORDER BY deadline ASC";
-                        break;
-                    default: // newest
-                        $query .= " ORDER BY created_at DESC";
-                        break;
-                }
-                
-                try {
-                    $stmt = $db->prepare($query);
-                    $stmt->execute($params);
-                    $campaigns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                    // Apply urgent sorting in PHP (needs date calculation)
-                    if ($sort === 'urgent') {
-                        usort($campaigns, function($a, $b) {
-                            $a_days = ceil((strtotime($a['deadline']) - time()) / (60 * 60 * 24));
-                            $b_days = ceil((strtotime($b['deadline']) - time()) / (60 * 60 * 24));
-                            $a_urgent = $a_days <= 7 ? -1 : 1;
-                            $b_urgent = $b_days <= 7 ? -1 : 1;
-                            return $a_urgent <=> $b_urgent;
-                        });
-                    }
-
-                    if (empty($campaigns)) {
-                ?>
-                <div class="col-12">
-                    <div class="card shadow">
-                        <div class="card-body text-center py-5">
-                            <i class="fas fa-search fa-4x text-muted mb-3"></i>
-                            <h4 class="text-muted">No Campaigns Found</h4>
-                            <p class="text-muted">No campaigns match your search criteria. Try different filters.</p>
-                            <a href="campaigns.php" class="btn btn-primary">Clear Filters</a>
-                        </div>
-                    </div>
-                </div>
-                <?php 
-                    } else {
-                        foreach ($campaigns as $campaign) {
-                            $progress = $campaign['target_amount'] > 0 ? ($campaign['current_amount'] / $campaign['target_amount']) * 100 : 0;
-                            $progress_class = $progress >= 80 ? 'bg-success' : ($progress >= 50 ? 'bg-info' : 'bg-warning');
-                            $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
-                            
-                            // Determine campaign image
-                            $category = isset($campaign['category']) && !empty($campaign['category']) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category'])) : 'default';
-                            $campaign_image = '../../assets/images/campaigns/' . $category . '.jpg';
-                            if (!file_exists($campaign_image)) {
-                                $campaign_image = '../../assets/images/campaigns/default.jpg';
-                            }
-                ?>
-                    <div class="col campaign-item d-flex align-items-stretch p-2" data-category="<?php echo htmlspecialchars($campaign['category']); ?>">
-                        <div class="card campaign-card h-100 d-flex flex-column border-0 shadow-sm amazon-card">
-                            <div class="position-relative text-center bg-white" style="padding-top:16px;">
-                                <img src="<?php echo $campaign_image; ?>" class="card-img-top mx-auto" alt="<?php echo htmlspecialchars($campaign['title']); ?>" style="height: 180px; width: 90%; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);" onerror="this.onerror=null;this.src='../../assets/images/campaigns/default.jpg';">
-                                <span class="badge bg-success text-capitalize position-absolute top-0 start-0 m-2" style="font-size:0.9em;"> <?php echo htmlspecialchars(ucfirst($campaign['category'])); ?> </span>
-                                <span class="badge <?php echo $days_left <= 7 ? 'bg-danger' : 'bg-warning'; ?> position-absolute top-0 end-0 m-2" style="font-size:0.9em;"> <i class="fas fa-clock me-1"></i><?php echo $days_left > 0 ? $days_left . ' days left' : 'Ended'; ?> </span>
-                            </div>
-                            <div class="card-body d-flex flex-column px-3 pb-3 pt-2">
-                                <h6 class="card-title fw-bold mb-1 text-dark text-truncate" title="<?php echo htmlspecialchars($campaign['title']); ?>"><?php echo htmlspecialchars($campaign['title']); ?></h6>
-                                <p class="card-text text-muted flex-grow-1 mb-2" style="min-height: 40px; font-size:0.97em;"> <?php echo htmlspecialchars($campaign['description']); ?> </p>
-                                <div class="mb-2">
-                                    <div class="progress mb-1" style="height: 7px;">
-                                        <div class="progress-bar <?php echo $progress_class; ?>" style="width: <?php echo min($progress, 100); ?>%"></div>
-                                    </div>
-                                    <div class="d-flex justify-content-between small text-muted" style="font-size:0.95em;">
-                                        <span><?php echo number_format($progress, 1); ?>% funded</span>
-                                        <span>Ksh <?php echo number_format($campaign['current_amount']); ?> of Ksh <?php echo number_format($campaign['target_amount']); ?></span>
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <span class="text-muted" style="font-size:0.95em;"><i class="fas fa-map-marker-alt me-1"></i> <?php echo htmlspecialchars($campaign['location'] ?? ''); ?></span>
-                                    <a href="campaign_detail.php?id=<?php echo $campaign['campaign_id']; ?>" class="btn btn-warning btn-sm px-3" style="font-weight:500;">
-                                        <i class="fas fa-eye me-1"></i>View Details
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php 
-                        }
-                    }
-                } catch (PDOException $e) {
-                    echo '<div class="col-12"><div class="alert alert-danger">Error loading campaigns: ' . htmlspecialchars($e->getMessage()) . '</div></div>';
-                }
-                ?>
-            </div>
-
-            <!-- Pagination - Only show if there are campaigns -->
-            <?php if (!empty($campaigns)): ?>
-            <div class="row">
-                <div class="col-12">
-                    <nav aria-label="Campaign pagination" class="mt-4">
-                        <ul class="pagination justify-content-center">
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#" tabindex="-1">Previous</a>
-                            </li>
-                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item"><a class="page-link" href="#">2</a></li>
-                            <li class="page-item"><a class="page-link" href="#">3</a></li>
-                            <li class="page-item">
-                                <a class="page-link" href="#">Next</a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
-            </div>
-            <?php endif; ?>
-        </main>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Browse Campaigns</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <select class="form-select form-select-sm" id="sort-select" style="min-width: 200px;">
+            <option value="newest" <?php echo $sort === 'newest' ? 'selected' : ''; ?>>Sort by: Newest First</option>
+            <option value="most_funded" <?php echo $sort === 'most_funded' ? 'selected' : ''; ?>>Sort by: Most Funded</option>
+            <option value="ending_soon" <?php echo $sort === 'ending_soon' ? 'selected' : ''; ?>>Sort by: Ending Soon</option>
+            <option value="urgent" <?php echo $sort === 'urgent' ? 'selected' : ''; ?>>Sort by: Most Urgent</option>
+        </select>
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Sort select
-    const sortSelect = document.getElementById('sort-select');
-    if (sortSelect) {
-        sortSelect.addEventListener('change', function() {
-            const url = new URL(window.location);
-            url.searchParams.set('sort', this.value);
-            window.location.href = url.toString();
-        });
-    }
+<!-- Search and Filter Section -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form method="GET" action="" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Campaigns</label>
+                <input type="text" class="form-control" id="search" name="search"
+                       value="<?php echo htmlspecialchars($search); ?>"
+                       placeholder="Search by title or description...">
+            </div>
 
-    // Search form functionality
-    const searchForm = document.getElementById('search-form');
-    if (searchForm) {
-        searchForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const searchInput = this.querySelector('input[name="search"]');
-            if (searchInput.value.trim()) {
-                this.submit();
+            <div class="col-md-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    <option value="education" <?php echo $category === 'education' ? 'selected' : ''; ?>>Education</option>
+                    <option value="food" <?php echo $category === 'food' ? 'selected' : ''; ?>>Food</option>
+                    <option value="medical" <?php echo $category === 'medical' ? 'selected' : ''; ?>>Medical</option>
+                    <option value="shelter" <?php echo $category === 'shelter' ? 'selected' : ''; ?>>Shelter</option>
+                    <option value="clothing" <?php echo $category === 'clothing' ? 'selected' : ''; ?>>Clothing</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="location" class="form-label">Location</label>
+                <input type="text" class="form-control" id="location" name="location"
+                       value="<?php echo htmlspecialchars($location); ?>"
+                       placeholder="Enter location...">
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Campaigns Grid -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4 justify-content-center" id="campaigns-grid">
+
+<?php
+// Base query
+$query = "SELECT c.campaign_id, c.title, c.description, c.category, c.target_amount, 
+                 c.current_amount, c.deadline, c.created_at, o.location 
+          FROM campaigns c 
+          LEFT JOIN orphanages o ON c.orphanage_id = o.orphanage_id 
+          WHERE c.status='active'";
+
+$params = [];
+$conditions = [];
+
+// Search filter
+if (!empty($search)) {
+    $conditions[] = "(c.title LIKE ? OR c.description LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+// Category filter
+if (!empty($category)) {
+    $conditions[] = "c.category = ?";
+    $params[] = $category;
+}
+
+// Location filter
+if (!empty($location)) {
+    $conditions[] = "o.location LIKE ?";
+    $params[] = "%$location%";
+}
+
+if (!empty($conditions)) {
+    $query .= " AND " . implode(" AND ", $conditions);
+}
+
+// Sorting
+switch ($sort) {
+    case 'most_funded':
+        $query .= " ORDER BY (c.current_amount/c.target_amount) DESC";
+        break;
+    case 'ending_soon':
+        $query .= " ORDER BY c.deadline ASC";
+        break;
+    case 'urgent':
+        $query .= " ORDER BY c.deadline ASC, (c.current_amount/c.target_amount) ASC";
+        break;
+    default:
+        $query .= " ORDER BY c.created_at DESC";
+        break;
+}
+
+try {
+    $stmt = $db->prepare($query);
+    $stmt->execute($params);
+    $campaigns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($campaigns)) {
+        echo '<div class="col-12"><div class="alert alert-info text-center py-4">
+              No campaigns found. Try adjusting your filters.</div></div>';
+    } else {
+        foreach ($campaigns as $campaign) {
+
+            $progress = $campaign['target_amount'] > 0
+                ? ($campaign['current_amount'] / $campaign['target_amount']) * 100
+                : 0;
+
+            $days_left = ceil((strtotime($campaign['deadline']) - time()) / 86400);
+
+            $image_key = strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category']));
+            // Browser path for <img src>
+            $browser_path = "../../assets/images/campaigns/$image_key.jpg";
+            // Absolute filesystem path for file_exists
+            $absolute_path = __DIR__ . "/../../assets/images/campaigns/$image_key.jpg";
+            // If image does not exist, fallback
+            if (!file_exists($absolute_path)) {
+                $browser_path = "../../assets/images/campaigns/default.jpg";
             }
-        });
+?>
+    <div class="col p-2">
+        <div class="card shadow-sm">
+            <img src="<?php echo $browser_path; ?>" class="card-img-top" style="height:180px; object-fit:cover;">
+            <div class="card-body">
+                <h5 class="card-title"><?php echo htmlspecialchars($campaign['title']); ?></h5>
+                <p class="card-text text-muted"><?php echo htmlspecialchars($campaign['description']); ?></p>
+
+                <div class="progress mb-2">
+                    <div class="progress-bar" style="width: <?php echo min($progress, 100); ?>%;"></div>
+                </div>
+
+                <a href="campaign_detail.php?id=<?php echo $campaign['campaign_id']; ?>" class="btn btn-primary w-100">
+                    View Details
+                </a>
+            </div>
+        </div>
+    </div>
+<?php
+        }
     }
 
-    // Campaign card hover effects
-    const campaignCards = document.querySelectorAll('.campaign-card');
-    campaignCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-            this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-        });
-    });
-});
-</script>
-
-<style>
-
-.amazon-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.09);
-    background: #fff;
-    transition: box-shadow 0.2s, transform 0.2s;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    border: 1px solid #f2f2f2;
+} catch (PDOException $e) {
+    error_log("Campaigns error: " . $e->getMessage());
+    echo '<div class="col-12"><div class="alert alert-danger">Error loading campaigns.</div></div>';
 }
-.amazon-card:hover {
-    box-shadow: 0 8px 32px rgba(0,0,0,0.13);
-    transform: translateY(-3px) scale(1.02);
-    z-index: 2;
-}
-
-.btn-group .btn.active {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-.card-img-top {
-    border-radius: 12px 12px 0 0;
-}
-
-.progress {
-    border-radius: 4px;
-}
-</style>
+?>
+</div>
 
 <?php include '../../includes/footer.php'; ?>

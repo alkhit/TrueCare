@@ -17,14 +17,17 @@ checkAuth(); // This will redirect to login if not authenticated
 $page_title = "Dashboard - TrueCare";
 
 // Include header
+
 $header_path = __DIR__ . '/../../includes/header.php';
 if (!file_exists($header_path)) {
     die('Header file not found.');
 }
-include $header_path;
+require_once $header_path;
 
-$user_role = $_SESSION['user_role'];
-$user_id = $_SESSION['user_id'];
+
+// Get user info from session
+$user_id = $_SESSION['user_id'] ?? null;
+$user_role = $_SESSION['user_role'] ?? 'donor';
 
 // Fetch role-specific data
 $dashboard_data = getDashboardData($user_role, $user_id, $db);
@@ -222,16 +225,11 @@ if (isset($_SESSION['error'])) {
 }
 ?>
 
-<!-- Sidebar -->
-<?php if (isset($_SESSION['user_id'])): ?>
-<nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-    <?php include __DIR__ . '/../auth/sidebar.php'; ?>
-</nav>
-<?php endif; ?>
+
 
 <!-- Featured Campaigns Section -->
 <section class="featured-campaigns py-5">
-    <div class="container">
+    <div class="container-fluid px-0">
         <div class="row">
             <?php
             $featuredStmt = $db->query("SELECT campaign_id, title, description, category, target_amount, current_amount, deadline FROM campaigns WHERE status='active' ORDER BY created_at DESC LIMIT 3");
@@ -275,7 +273,7 @@ if (isset($_SESSION['error'])) {
                                         echo $days_left > 0 ? $days_left . ' days left' : 'Ended';
                                         ?>
                                     </small>
-                                    <a href="src/campaigns/campaign_detail.php?id=<?php echo $campaign['campaign_id']; ?>" class="btn btn-success btn-sm">
+                                    <a href="../../src/campaigns/campaign_detail.php?id=<?php echo $campaign['campaign_id']; ?>" class="btn btn-success btn-sm">
                                         <i class="fas fa-eye me-1"></i>View
                                     </a>
                                 </div>

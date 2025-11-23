@@ -1,6 +1,9 @@
-
 <?php
 require_once __DIR__ . '/../../../includes/functions.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 if (!function_exists('formatCurrency')) {
     function formatCurrency($amount) {
         if (!is_numeric($amount)) {
@@ -9,9 +12,17 @@ if (!function_exists('formatCurrency')) {
         return 'Ksh ' . number_format($amount);
     }
 }
+// Get donor's total donated amount from DB
+$user_id = $_SESSION['user_id'] ?? null;
+$total_donated = 0;
+if ($user_id) {
+    $stmt = $db->prepare('SELECT COALESCE(SUM(amount),0) as total FROM donations WHERE user_id = ? AND status = "completed"');
+    $stmt->execute([$user_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $total_donated = $row['total'] ?? 0;
+}
 // Ensure we have the dashboard data
 $data = $dashboard_data ?? [];
-$total_donated = $data['total_donated'] ?? 0;
 $total_donations = $data['total_donations'] ?? 0;
 $campaigns_supported = $data['campaigns_supported'] ?? 0;
 ?>
@@ -158,8 +169,9 @@ $campaigns_supported = $data['campaigns_supported'] ?? 0;
                 <?php else:
                     foreach ($featuredCampaigns as $campaign):
                         $category = isset($campaign['category']) && !empty($campaign['category']) ? strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', $campaign['category'])) : 'default';
+                        $img_check_path = $_SERVER['DOCUMENT_ROOT'] . "/TrueCare/assets/images/campaigns/$category.jpg";
                         $image_path = abs_path('assets/images/campaigns/' . $category . '.jpg');
-                        if (!file_exists($image_path)) {
+                        if (!file_exists($img_check_path)) {
                             $image_path = abs_path('assets/images/campaigns/default.jpg');
                         }
                         $progress = $campaign['target_amount'] > 0 ? ($campaign['current_amount'] / $campaign['target_amount']) * 100 : 0;

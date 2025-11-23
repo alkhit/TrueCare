@@ -5,6 +5,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'orphanage') {
     exit;
 }
 include '../../includes/config.php';
+require_once '../../includes/functions.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 include '../../includes/header.php';
 
 // Get user ID from session

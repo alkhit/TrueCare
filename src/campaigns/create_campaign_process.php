@@ -2,6 +2,10 @@
 session_start();
 require_once '../../includes/config.php';
 require_once '../../includes/functions.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'orphanage') {
     header('Location: ../../login.php');
@@ -28,7 +32,6 @@ if (!file_exists($image_path)) {
 }
 
 // Insert campaign
-
 
 $stmt = $db->prepare('INSERT INTO campaigns (orphanage_id, title, description, category, target_amount, deadline, image_url, status) VALUES ((SELECT orphanage_id FROM orphanages WHERE user_id = :user_id), :title, :description, :category, :target_amount, :deadline, :image_url, :status)');
 $stmt->bindParam(':user_id', $_SESSION['user_id']);

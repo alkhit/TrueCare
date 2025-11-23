@@ -7,6 +7,11 @@ if (!isset($_SESSION['user_id'])) {
 
 $campaign_id = $_GET['id'] ?? 1;
 include '../../includes/config.php';
+require_once '../../includes/functions.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 include '../../includes/header.php';
 
 // Fetch campaign details from database
@@ -27,7 +32,10 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
     <div class="row">
         <!-- Sidebar -->
         <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php include '../auth/sidebar.php'; ?>
+            <?php 
+            $sidebar_path = __DIR__ . '/../auth/sidebar.php';
+            if (file_exists($sidebar_path)) { include $sidebar_path; }
+            ?>
         </nav>
 
         <!-- Main content -->
@@ -130,29 +138,28 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                                 </div>
                             </div>
 
-                            <!-- Quick Donate Buttons -->
-                            <div class="mb-3">
-                                <label class="form-label">Quick Donate</label>
-                                <div class="row g-2 mb-3">
-                                    <?php 
-                                    $quick_amounts = [500, 1000, 2000, 5000];
-                                    foreach ($quick_amounts as $amount): 
-                                    ?>
-                                    <div class="col-6">
-                                        <a href="../donations/donate.php?campaign_id=<?php echo $campaign_id; ?>&amount=<?php echo $amount; ?>" 
-                                           class="btn btn-outline-success w-100 btn-sm">
-                                            Ksh <?php echo number_format($amount); ?>
-                                        </a>
+                            <!-- Quick Donate and Donate Buttons -->
+                            <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'orphanage'): ?>
+                                <!-- Quick Donate Buttons -->
+                                <div class="card shadow mb-4">
+                                    <div class="card-body">
+                                        <label class="form-label">Quick Donate</label>
+                                        <div class="d-flex gap-2">
+                                            <?php foreach ([500, 1000, 5000, 10000] as $amount): ?>
+                                                <a href="../donations/donate.php?campaign_id=<?php echo $campaign_id; ?>&amount=<?php echo $amount; ?>" 
+                                                   class="btn btn-warning btn-lg flex-fill">
+                                                    Ksh <?php echo number_format($amount); ?>
+                                                </a>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
-                                    <?php endforeach; ?>
                                 </div>
-                            </div>
-
-                            <!-- Donate Button -->
-                            <a href="../donations/donate.php?campaign_id=<?php echo $campaign_id; ?>" 
-                               class="btn btn-success btn-lg w-100 py-3">
-                                <i class="fas fa-donate me-2"></i>Donate Now
-                            </a>
+                                <!-- Donate Button -->
+                                <a href="../donations/donate.php?campaign_id=<?php echo $campaign_id; ?>" 
+                                   class="btn btn-success btn-lg w-100 py-3">
+                                    <i class="fas fa-donate me-2"></i>Donate Now
+                                </a>
+                            <?php endif; ?>
 
                             <!-- Share -->
                             <div class="text-center mt-3">
@@ -182,7 +189,23 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
                         </div>
                         <div class="card-body">
                             <div class="d-flex align-items-center">
-                                <img src="../../assets/images/orphanage.png" alt="Orphanage" class="rounded-circle me-3" width="50">
+                                <?php
+                                // Organizer initials logic
+                                $org_name = $campaign['orphanage_name'] ?? '';
+                                $initials = '';
+                                if ($org_name) {
+                                    $words = preg_split('/\s+/', $org_name);
+                                    foreach ($words as $w) {
+                                        if (strlen($w) > 0) {
+                                            $initials .= strtoupper($w[0]);
+                                        }
+                                    }
+                                    $initials = substr($initials, 0, 2);
+                                }
+                                ?>
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width:50px; height:50px; font-size:1.5em; font-weight:bold;">
+                                    <?php echo $initials ?: '?'; ?>
+                                </div>
                                 <div>
                                     <h6 class="mb-0"><?php echo htmlspecialchars($campaign['orphanage_name']); ?></h6>
                                     <small class="text-muted">

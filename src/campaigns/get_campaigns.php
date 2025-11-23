@@ -1,5 +1,11 @@
 <?php
 include '../../includes/config.php';
+require_once '../../includes/functions.php';
+
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 
 header('Content-Type: application/json');
 

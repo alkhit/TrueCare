@@ -1,8 +1,11 @@
-
 <?php
 require_once __DIR__ . '/../../includes/functions.php';
 session_start();
 require_once __DIR__ . '/../../includes/config.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 checkAuth('orphanage');
 
 $user_id = $_SESSION['user_id'];
@@ -74,7 +77,18 @@ include '../../includes/header.php';
                                             <td><?php echo htmlspecialchars($donation['donor_name']); ?></td>
                                             <td><?php echo htmlspecialchars($donation['campaign_title']); ?></td>
                                             <td><?php echo formatCurrency($donation['amount']); ?></td>
-                                            <td><?php echo date('d M Y', strtotime($donation['created_at'])); ?></td>
+                                            <td>
+                                                <?php
+                                                // Safely display date if available
+                                                if (!empty($donation['created_at'])) {
+                                                    echo date('d M Y', strtotime($donation['created_at']));
+                                                } elseif (!empty($donation['donation_date'])) {
+                                                    echo date('d M Y', strtotime($donation['donation_date']));
+                                                } else {
+                                                    echo '<span class="text-muted">N/A</span>';
+                                                }
+                                                ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

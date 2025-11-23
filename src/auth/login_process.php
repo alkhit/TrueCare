@@ -7,6 +7,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/functions.php';
+// Ensure $db is defined
+if (!isset($db)) {
+    $db = get_db();
+}
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -81,11 +86,7 @@ try {
     }
 
     error_log("LOGIN SUCCESSFUL for user: " . $user['email']);
-    echo json_encode([
-        'success' => true, 
-        'message' => 'Login successful!', 
-        'redirect' => $redirect
-    ]);
+    header('Location: ' . $redirect);
     exit;
     
 } catch (Exception $e) {
