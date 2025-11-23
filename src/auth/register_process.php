@@ -1,121 +1,128 @@
 <?php
-session_start();
+// src/auth/register_process.php
 
-// Enable all errors for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Start session at the very top
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Include config
-require_once '../../includes/config.php';
+require_once __DIR__ . '/../../includes/config.php';
+header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    $role = $_POST['role'] ?? '';
-    $password = $_POST['password'] ?? '';
-    $confirm_password = $_POST['confirm_password'] ?? '';
-    
-    error_log("Registration attempt: $email, Role: $role");
-    
-    try {
-        // Validate inputs
-        if (empty($name) || empty($email) || empty($role) || empty($password)) {
-            throw new Exception("All required fields must be filled.");
-        }
-        
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new Exception("Please enter a valid email address.");
-        }
-        
-        if ($password !== $confirm_password) {
-            throw new Exception("Passwords do not match.");
-        }
-        
-        if (strlen($password) < 6) {
-            throw new Exception("Password must be at least 6 characters long.");
-        }
-        
-        if (!in_array($role, ['donor', 'orphanage'])) {
-            throw new Exception("Please select a valid role.");
-        }
-        
-        // Check if email already exists
-        $checkQuery = "SELECT user_id FROM users WHERE email = :email";
-        $checkStmt = $db->prepare($checkQuery);
-        $checkStmt->bindParam(':email', $email);
-        
-        if (!$checkStmt->execute()) {
-            throw new Exception("Database error checking email.");
-        }
-        
-        if ($checkStmt->rowCount() > 0) {
-            throw new Exception("Email already registered. Please use a different email.");
-        }
-        
-        // Hash password
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        // Insert user
-        $insertQuery = "INSERT INTO users (name, email, phone, role, password, created_at) 
-                        VALUES (:name, :email, :phone, :role, :password, NOW())";
-        $insertStmt = $db->prepare($insertQuery);
-        $insertStmt->bindParam(':name', $name);
-        $insertStmt->bindParam(':email', $email);
-        $insertStmt->bindParam(':phone', $phone);
-        $insertStmt->bindParam(':role', $role);
-        $insertStmt->bindParam(':password', $hashed_password);
-        
-        if ($insertStmt->execute()) {
-            $user_id = $db->lastInsertId();
-            error_log("User created successfully - ID: $user_id");
-            
-            // If orphanage, create orphanage record
-            if ($role === 'orphanage') {
-                $orphanageQuery = "INSERT INTO orphanages (user_id, name, location, status, created_at) 
-                                   VALUES (:user_id, :name, '', 'pending', NOW())";
-                $orphanageStmt = $db->prepare($orphanageQuery);
-                $orphanageStmt->bindParam(':user_id', $user_id);
-                $orphanageStmt->bindParam(':name', $name);
-                $orphanageStmt->execute();
-                error_log("Orphanage record created");
-            }
-            
-            // Set session and redirect
-            $_SESSION['user_id'] = $user_id;
-            $_SESSION['user_name'] = $name;
-            $_SESSION['user_email'] = $email;
-            $_SESSION['user_role'] = $role;
-            $_SESSION['logged_in'] = true;
-            
-            error_log("Registration complete - redirecting to dashboard");
-            
-            // Redirect to dashboard
-            header("Location: dashboard.php");
-            exit;
-            
-        } else {
-            throw new Exception("Failed to create user account.");
-        }
-        
-    } catch (Exception $e) {
-        error_log("Registration error: " . $e->getMessage());
-        
-        // Store error and form data
-        $_SESSION['error'] = $e->getMessage();
-        $_SESSION['form_data'] = [
-            'name' => $name,
-            'email' => $email,
-            'phone' => $phone,
-            'role' => $role
-        ];
-        
-        header("Location: ../../register.php");
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    exit;
+}
+
+// Clear any existing session data to prevent conflicts
+unset($_SESSION['user_id']);
+unset($_SESSION['user_name']);
+unset($_SESSION['user_role']);
+unset($_SESSION['user_email']);
+
+// Basic sanitation
+$name = trim($_POST['name'] ?? '');
+$email = strtolower(trim($_POST['email'] ?? ''));
+$password = $_POST['password'] ?? '';
+$confirm = $_POST['confirm_password'] ?? '';
+$role = in_array($_POST['role'] ?? 'donor', ['donor','orphanage','admin']) ? $_POST['role'] : 'donor';
+$phone = trim($_POST['phone'] ?? '');
+
+// Validation
+if (empty($name) || empty($email) || empty($password)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Please fill all required fields']);
+    exit;
+}
+
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid email format']);
+    exit;
+}
+
+if ($password !== $confirm) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Passwords do not match']);
+    exit;
+}
+
+if (strlen($password) < 6) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters']);
+    exit;
+}
+
+try {
+    // Check existing user (case-insensitive)
+    $stmt = $db->prepare("SELECT user_id FROM users WHERE LOWER(email) = :email LIMIT 1");
+    $stmt->execute([':email' => strtolower($email)]);
+    if ($stmt->fetch()) {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'Email already registered. Please login instead.']);
         exit;
     }
+
+    // Hash password
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+
+    // Insert user
+    $insert = $db->prepare("INSERT INTO users (name, email, password, role, phone, created_at, is_active) VALUES (:name, :email, :password, :role, :phone, NOW(), 1)");
+    $insert->execute([
+        ':name' => $name,
+        ':email' => $email,
+        ':password' => $hash,
+        ':role' => $role,
+        ':phone' => $phone
+    ]);
+
+    $userId = $db->lastInsertId();
+
+    // Set session data immediately
+    $_SESSION['user_id'] = (int)$userId;
+    $_SESSION['user_name'] = $name;
+    $_SESSION['user_role'] = $role;
+    $_SESSION['user_email'] = $email;
+    $_SESSION['logged_in'] = true;
+
+    // Determine redirect based on role
+    $redirect = '';
+    switch($role) {
+        case 'donor':
+            $redirect = '../../src/donor/dashboard.php';
+            break;
+        case 'orphanage':
+            $redirect = '../../src/orphanage/register_orphanage.php';
+            break;
+        case 'admin':
+            $redirect = '../../src/admin/dashboard.php';
+            break;
+        default:
+            $redirect = '../../src/auth/dashboard.php';
+    }
+
+    // Ensure the redirect path exists
+    $absolute_redirect = $this->getAbsolutePath($redirect);
     
-} else {
-    header("Location: ../../register.php");
+    http_response_code(200);
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Registration successful! Redirecting...', 
+        'redirect' => $redirect
+    ]);
     exit;
+
+} catch (Exception $e) {
+    error_log("Register error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
+    exit;
+}
+
+// Helper function to get absolute path
+function getAbsolutePath($relativePath) {
+    $basePath = dirname(dirname(dirname(__DIR__)));
+    return realpath($basePath . '/' . $relativePath);
 }
 ?>

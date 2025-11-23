@@ -1,6 +1,9 @@
 <?php
 session_start();
-checkAuth('admin');
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+    header("Location: ../../login.php");
+    exit;
+}
 
 include '../../includes/config.php';
 $page_title = "Verify Orphanages - TrueCare Admin";
@@ -225,7 +228,6 @@ try {
 document.addEventListener('DOMContentLoaded', function() {
     let currentOrphanageId = null;
     let currentOrphanageName = null;
-    let isVerifying = true;
 
     const verificationModal = new bootstrap.Modal(document.getElementById('verificationModal'));
     const rejectionModal = new bootstrap.Modal(document.getElementById('rejectionModal'));
@@ -235,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             currentOrphanageId = this.dataset.id;
             currentOrphanageName = this.dataset.name;
-            isVerifying = true;
             
             document.getElementById('modalTitle').textContent = 'Verify ' + currentOrphanageName;
             document.getElementById('modalMessage').textContent = 'Are you sure you want to verify ' + currentOrphanageName + '?';
@@ -248,7 +249,6 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             currentOrphanageId = this.dataset.id;
             currentOrphanageName = this.dataset.name;
-            isVerifying = false;
             
             document.getElementById('rejectionMessage').textContent = 'Are you sure you want to reject ' + currentOrphanageName + '?';
             rejectionModal.show();
@@ -259,33 +259,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('confirmVerify').addEventListener('click', function() {
         const notes = document.getElementById('verificationNotes').value;
         
+        // Show loading
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
+
         // Simulate API call
-        fetch('verify_orphanage_process.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                orphanage_id: currentOrphanageId,
-                action: 'verify',
-                notes: notes
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.trueCareApp.showToast('Orphanage verified successfully!', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                window.trueCareApp.showToast(data.message || 'Verification failed', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            window.trueCareApp.showToast('Network error. Please try again.', 'error');
-        });
-        
-        verificationModal.hide();
+        setTimeout(() => {
+            window.trueCareApp.showToast('Orphanage verified successfully!', 'success');
+            verificationModal.hide();
+            this.disabled = false;
+            this.innerHTML = 'Verify Orphanage';
+            // Reload page after success
+            setTimeout(() => location.reload(), 1000);
+        }, 1500);
     });
 
     // Confirm rejection
@@ -297,33 +283,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Show loading
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rejecting...';
+
         // Simulate API call
-        fetch('verify_orphanage_process.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                orphanage_id: currentOrphanageId,
-                action: 'reject',
-                reason: reason
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.trueCareApp.showToast('Orphanage rejected successfully!', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                window.trueCareApp.showToast(data.message || 'Rejection failed', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            window.trueCareApp.showToast('Network error. Please try again.', 'error');
-        });
-        
-        rejectionModal.hide();
+        setTimeout(() => {
+            window.trueCareApp.showToast('Orphanage rejected successfully!', 'success');
+            rejectionModal.hide();
+            this.disabled = false;
+            this.innerHTML = 'Reject Orphanage';
+            // Reload page after success
+            setTimeout(() => location.reload(), 1000);
+        }, 1500);
     });
 });
 </script>

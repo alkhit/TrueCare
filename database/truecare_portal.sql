@@ -1,47 +1,271 @@
--- Complete database reset with working passwords
-DROP DATABASE IF EXISTS truecare_portal;
-CREATE DATABASE truecare_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE truecare_portal;
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Nov 23, 2025 at 11:37 AM
+-- Server version: 11.6.2-MariaDB
+-- PHP Version: 8.2.12
 
--- Users table
-CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('donor', 'orphanage', 'admin') NOT NULL,
-    phone VARCHAR(20),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    last_login TIMESTAMP NULL,
-    INDEX idx_email (email),
-    INDEX idx_role (role)
-);
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
--- Orphanages table
-CREATE TABLE orphanages (
-    orphanage_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    name VARCHAR(200) NOT NULL,
-    location VARCHAR(200),
-    registration_number VARCHAR(50) UNIQUE,
-    description TEXT,
-    contact_info VARCHAR(100),
-    image_url VARCHAR(255),
-    status ENUM('pending', 'verified', 'rejected') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_status (status),
-    INDEX idx_user_id (user_id)
-);
 
--- Insert users with VERIFIED WORKING PASSWORDS
-INSERT INTO users (name, email, password, role, phone) VALUES 
-('System Administrator', 'admin@truecare.org', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', '0700000000'),
-('Hope Children Center', 'orphanage@truecare.org', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'orphanage', '0700000001'),
-('John Doe', 'donor@truecare.org', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'donor', '0700000002');
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- Create orphanage record
-INSERT INTO orphanages (user_id, name, location, status) 
-SELECT user_id, name, 'Nairobi, Kenya', 'verified' 
-FROM users WHERE email = 'orphanage@truecare.org';
+--
+-- Database: `truecare_portal`
+--
+DROP DATABASE IF EXISTS `truecare_portal`;
+CREATE DATABASE `truecare_portal` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `truecare_portal`;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('donor','orphanage','admin') NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `phone` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_login` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `orphanages`
+--
+
+CREATE TABLE `orphanages` (
+  `orphanage_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `name` varchar(200) NOT NULL,
+  `location` varchar(200) DEFAULT NULL,
+  `registration_number` varchar(50) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `contact_info` varchar(100) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('pending','verified','rejected') DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `campaigns`
+--
+
+CREATE TABLE `campaigns` (
+  `campaign_id` int(11) NOT NULL,
+  `orphanage_id` int(11) DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `category` enum('education','medical','food','shelter','clothing','other') NOT NULL,
+  `target_amount` decimal(10,2) NOT NULL,
+  `current_amount` decimal(10,2) DEFAULT 0.00,
+  `image_url` varchar(255) DEFAULT NULL,
+  `status` enum('draft','active','completed','cancelled') DEFAULT 'draft',
+  `deadline` date DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `donations`
+--
+
+CREATE TABLE `donations` (
+  `donation_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `campaign_id` int(11) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `payment_method` enum('mpesa','card','paypal') NOT NULL,
+  `transaction_id` varchar(100) DEFAULT NULL,
+  `status` enum('pending','completed','failed') DEFAULT 'pending',
+  `donation_date` timestamp NULL DEFAULT current_timestamp(),
+  `message` text DEFAULT NULL,
+  `is_anonymous` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pending_orphanage_changes`
+--
+
+CREATE TABLE `pending_orphanage_changes` (
+  `change_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `orphanage_id` int(11) DEFAULT NULL,
+  `name` varchar(200) DEFAULT NULL,
+  `location` varchar(200) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `orphanage_registrations`
+--
+
+CREATE TABLE `orphanage_registrations` (
+  `registration_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `name` varchar(200) DEFAULT NULL,
+  `location` varchar(200) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`user_id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `idx_email` (`email`),
+  ADD KEY `idx_role` (`role`);
+
+--
+-- Indexes for table `orphanages`
+--
+ALTER TABLE `orphanages`
+  ADD PRIMARY KEY (`orphanage_id`),
+  ADD UNIQUE KEY `registration_number` (`registration_number`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_user_id` (`user_id`);
+
+--
+-- Indexes for table `campaigns`
+--
+ALTER TABLE `campaigns`
+  ADD PRIMARY KEY (`campaign_id`),
+  ADD KEY `orphanage_id` (`orphanage_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_category` (`category`);
+
+--
+-- Indexes for table `donations`
+--
+ALTER TABLE `donations`
+  ADD PRIMARY KEY (`donation_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_campaign_id` (`campaign_id`);
+
+--
+-- Indexes for table `pending_orphanage_changes`
+--
+ALTER TABLE `pending_orphanage_changes`
+  ADD PRIMARY KEY (`change_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `orphanage_id` (`orphanage_id`);
+
+--
+-- Indexes for table `orphanage_registrations`
+--
+ALTER TABLE `orphanage_registrations`
+  ADD PRIMARY KEY (`registration_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `orphanages`
+--
+ALTER TABLE `orphanages`
+  MODIFY `orphanage_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `campaigns`
+--
+ALTER TABLE `campaigns`
+  MODIFY `campaign_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `donations`
+--
+ALTER TABLE `donations`
+  MODIFY `donation_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pending_orphanage_changes`
+--
+ALTER TABLE `pending_orphanage_changes`
+  MODIFY `change_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `orphanage_registrations`
+--
+ALTER TABLE `orphanage_registrations`
+  MODIFY `registration_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `orphanages`
+--
+ALTER TABLE `orphanages`
+  ADD CONSTRAINT `orphanages_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `campaigns`
+--
+ALTER TABLE `campaigns`
+  ADD CONSTRAINT `campaigns_ibfk_1` FOREIGN KEY (`orphanage_id`) REFERENCES `orphanages` (`orphanage_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `donations`
+--
+ALTER TABLE `donations`
+  ADD CONSTRAINT `donations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `donations_ibfk_2` FOREIGN KEY (`campaign_id`) REFERENCES `campaigns` (`campaign_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `pending_orphanage_changes`
+--
+ALTER TABLE `pending_orphanage_changes`
+  ADD CONSTRAINT `pending_orphanage_changes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `pending_orphanage_changes_ibfk_2` FOREIGN KEY (`orphanage_id`) REFERENCES `orphanages` (`orphanage_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `orphanage_registrations`
+--
+ALTER TABLE `orphanage_registrations`
+  ADD CONSTRAINT `orphanage_registrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

@@ -1,6 +1,9 @@
 <?php
 session_start();
-checkAuth('admin');
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+    header("Location: ../../login.php");
+    exit;
+}
 
 include '../../includes/config.php';
 $page_title = "Admin Panel - TrueCare";

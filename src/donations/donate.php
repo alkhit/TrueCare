@@ -6,20 +6,16 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Check if campaign_id is provided
-$campaign_id = $_GET['campaign_id'] ?? null;
-if (!$campaign_id) {
-    header("Location: ../campaigns/campaigns.php");
-    exit;
-}
+$campaign_id = $_GET['campaign_id'] ?? 1; // Default to 1 if not provided
 
 include '../../includes/config.php';
 include '../../includes/header.php';
 
 // Mock campaign data - in real app, fetch from database
 $campaigns = [
-    1 => ['title' => 'Education for Orphans', 'target' => 100000, 'raised' => 65000, 'image' => 'campaign1.jpg'],
-    2 => ['title' => 'Medical Supplies', 'target' => 150000, 'raised' => 45000, 'image' => 'campaign2.jpg'],
-    3 => ['title' => 'Food and Shelter', 'target' => 200000, 'raised' => 120000, 'image' => 'campaign3.jpg']
+    1 => ['title' => 'Education for Orphans', 'target' => 100000, 'raised' => 65000],
+    2 => ['title' => 'Medical Supplies', 'target' => 150000, 'raised' => 45000],
+    3 => ['title' => 'Food and Shelter', 'target' => 200000, 'raised' => 120000]
 ];
 
 $campaign = $campaigns[$campaign_id] ?? $campaigns[1];

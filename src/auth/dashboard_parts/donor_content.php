@@ -1,23 +1,18 @@
-<?php
-// This file is included in dashboard.php for donor users
-$user_id = $_SESSION['user_id'];
-
-// Fetch donor stats (mock data for now)
-try {
-    $donationStats = $db->prepare("
-        SELECT 
-            COUNT(*) as total_donations,
-            COALESCE(SUM(amount), 0) as total_donated,
-            COUNT(DISTINCT campaign_id) as campaigns_supported
-        FROM donations 
-        WHERE user_id = :user_id AND status = 'completed'
-    ");
-    $donationStats->bindParam(':user_id', $user_id);
-    $donationStats->execute();
-    $stats = $donationStats->fetch(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $stats = ['total_donations' => 0, 'total_donated' => 0, 'campaigns_supported' => 0];
+require_once __DIR__ . '/../../../includes/functions.php';
+if (!function_exists('formatCurrency')) {
+    function formatCurrency($amount) {
+        if (!is_numeric($amount)) {
+            $amount = 0;
+        }
+        return 'Ksh ' . number_format($amount);
+    }
 }
+<?php
+// Ensure we have the dashboard data
+$data = $dashboard_data ?? [];
+$total_donated = $data['total_donated'] ?? 0;
+$total_donations = $data['total_donations'] ?? 0;
+$campaigns_supported = $data['campaigns_supported'] ?? 0;
 ?>
 
 <!-- Stats Cards -->
@@ -30,7 +25,7 @@ try {
                         <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                             Total Donated</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            <?php echo formatCurrency($stats['total_donated']); ?>
+                            <?php echo formatCurrency($total_donated); ?>
                         </div>
                     </div>
                     <div class="col-auto">
@@ -48,7 +43,7 @@ try {
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                             Campaigns Supported</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['campaigns_supported']; ?></div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $campaigns_supported; ?></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-hand-holding-heart fa-2x text-gray-300"></i>
@@ -65,7 +60,7 @@ try {
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                             Total Donations</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total_donations']; ?></div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_donations; ?></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-receipt fa-2x text-gray-300"></i>
@@ -82,7 +77,7 @@ try {
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             Impact Score</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total_donations'] * 10; ?></div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_donations * 10; ?></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-star fa-2x text-gray-300"></i>
@@ -154,7 +149,8 @@ try {
                     <?php for($i = 1; $i <= 2; $i++): ?>
                     <div class="col-lg-6 mb-4">
                         <div class="card h-100">
-                            <img src="<?php echo abs_path('assets/images/campaign' . $i . '.jpg'); ?>" class="card-img-top" alt="Campaign" height="200" style="object-fit: cover;">
+                            <img src="<?php echo abs_path('assets/images/campaign' . $i . '.jpg'); ?>"
+                                class="card-img-top" alt="Campaign" height="200" style="object-fit: cover;">
                             <div class="card-body d-flex flex-column">
                                 <span class="badge bg-success mb-2">Education</span>
                                 <h6 class="card-title">Education Support #<?php echo $i; ?></h6>
@@ -189,7 +185,7 @@ try {
             </div>
         </div>
     </div>
-
+    
     <div class="col-lg-4">
         <!-- Recent Activity -->
         <div class="card shadow">
@@ -197,7 +193,7 @@ try {
                 <h6 class="m-0 font-weight-bold text-primary">Recent Activity</h6>
             </div>
             <div class="card-body">
-                <?php if ($stats['total_donations'] > 0): ?>
+                <?php if ($total_donations > 0): ?>
                 <div class="timeline">
                     <div class="timeline-item mb-3">
                         <div class="timeline-badge bg-success"></div>
@@ -236,29 +232,6 @@ try {
                     </div>
                 </div>
                 <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Impact Summary -->
-        <div class="card shadow mt-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Your Impact</h6>
-            </div>
-            <div class="card-body">
-                <div class="text-center">
-                    <div class="impact-circle mx-auto mb-3">
-                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mx-auto" 
-                             style="width: 100px; height: 100px;">
-                            <div>
-                                <h4 class="mb-0"><?php echo $stats['campaigns_supported']; ?></h4>
-                                <small>Campaigns</small>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="small text-muted">
-                        Your donations have helped support orphanages and change children's lives.
-                    </p>
-                </div>
             </div>
         </div>
     </div>

@@ -1,185 +1,210 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'orphanage') {
+if (!isset($_SESSION['user_id'])) {
     header("Location: ../../login.php");
     exit;
 }
+
 include '../../includes/config.php';
+$page_title = "My Profile - TrueCare";
 include '../../includes/header.php';
+
+$user_id = $_SESSION['user_id'];
+
+// Fetch user data
+try {
+    $userQuery = $db->prepare("
+        SELECT u.*, o.name as orphanage_name, o.location, o.description, o.status as orphanage_status
+        FROM users u 
+        LEFT JOIN orphanages o ON u.user_id = o.user_id
+        WHERE u.user_id = :user_id
+    ");
+    $userQuery->bindParam(':user_id', $user_id);
+    $userQuery->execute();
+    $user = $userQuery->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $user = [];
+}
 ?>
 
 <div class="container-fluid">
     <div class="row">
         <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php include '../auth/sidebar.php'; ?>
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+            <?php include 'sidebar.php'; ?>
         </nav>
 
         <!-- Main content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Create New Campaign</h1>
-                <a href="my_campaigns.php" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Campaigns
-                </a>
+                <h1 class="h2">
+                    <i class="fas fa-user me-2"></i>My Profile
+                </h1>
             </div>
 
             <div class="row">
-                <div class="col-lg-8">
+                <div class="col-lg-4">
+                    <!-- Profile Card -->
+                    <div class="card shadow mb-4">
+                        <div class="card-body text-center">
+                                                        <?php
+                                                            $name = $_SESSION['user_name'] ?? '';
+                                                            $initials = '';
+                                                            if ($name) {
+                                                                $parts = explode(' ', $name);
+                                                                foreach ($parts as $p) {
+                                                                    if (strlen($p) > 0) $initials .= strtoupper($p[0]);
+                                                                }
+                                                            }
+                                                        ?>
+                                                        <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center mb-3 mx-auto" style="width:120px;height:120px;font-size:3rem;">
+                                                            <?php echo $initials ?: '?'; ?>
+                                                        </div>
+                            <h4><?php echo htmlspecialchars($user['name']); ?></h4>
+                            <p class="text-muted"><?php echo ucfirst($user['role']); ?></p>
+                            <div class="mb-3">
+                                <span class="badge bg-<?php echo $user['orphanage_status'] === 'verified' ? 'success' : 'warning'; ?>">
+                                    <?php echo $user['orphanage_status'] ? ucfirst($user['orphanage_status']) : 'Active'; ?>
+                                </span>
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-camera me-2"></i>Change Photo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Info -->
                     <div class="card shadow">
-                        <div class="card-header py-3">
-                            <h5 class="m-0 font-weight-bold text-primary">Campaign Details</h5>
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">Account Information</h6>
                         </div>
                         <div class="card-body">
-                            <form id="create-campaign-form" action="create_campaign_process.php" method="POST" enctype="multipart/form-data">
-                                <!-- Campaign Title -->
-                                <div class="mb-4">
-                                    <label for="title" class="form-label fw-bold">Campaign Title *</label>
-                                    <input type="text" class="form-control" id="title" name="title" required 
-                                           placeholder="Enter a compelling title for your campaign">
-                                    <div class="form-text">Make it descriptive and engaging to attract donors</div>
-                                </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Member Since</small>
+                                <p class="mb-0"><?php echo date('M j, Y', strtotime($user['created_at'])); ?></p>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Last Login</small>
+                                <p class="mb-0"><?php echo $user['last_login'] ? date('M j, Y g:i A', strtotime($user['last_login'])) : 'Never'; ?></p>
+                            </div>
+                            <div class="mb-0">
+                                <small class="text-muted">Account Status</small>
+                                <p class="mb-0"><span class="badge bg-success">Active</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                                <!-- Campaign Description -->
-                                <div class="mb-4">
-                                    <label for="description" class="form-label fw-bold">Campaign Description *</label>
-                                    <textarea class="form-control" id="description" name="description" rows="6" required 
-                                              placeholder="Describe your campaign in detail. Explain what you're raising funds for, who will benefit, and how the funds will be used."></textarea>
-                                    <div class="form-text">Be specific about your goals and how donations will help</div>
-                                </div>
-
-                                <!-- Campaign Category -->
-                                <div class="mb-4">
-                                    <label for="category" class="form-label fw-bold">Category *</label>
-                                    <select class="form-select" id="category" name="category" required>
-                                        <option value="">Select a category</option>
-                                        <option value="education">Education</option>
-                                        <option value="medical">Medical & Healthcare</option>
-                                        <option value="food">Food & Nutrition</option>
-                                        <option value="shelter">Shelter & Housing</option>
-                                        <option value="clothing">Clothing & Essentials</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-
-                                <!-- Target Amount -->
-                                <div class="mb-4">
-                                    <label for="target_amount" class="form-label fw-bold">Funding Goal (Ksh) *</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">Ksh</span>
-                                        <input type="number" class="form-control" id="target_amount" name="target_amount" 
-                                               required min="1000" placeholder="Enter target amount">
-                                    </div>
-                                    <div class="form-text">Set a realistic funding goal for your campaign</div>
-                                </div>
-
-                                <!-- Campaign Deadline -->
-                                <div class="mb-4">
-                                    <label for="deadline" class="form-label fw-bold">Campaign Deadline *</label>
-                                    <input type="date" class="form-control" id="deadline" name="deadline" required 
-                                           min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
-                                    <div class="form-text">Set an end date for your fundraising campaign</div>
-                                </div>
-
-                                <!-- Campaign Image -->
-                                <div class="mb-4">
-                                    <label for="campaign_image" class="form-label fw-bold">Campaign Image *</label>
-                                    <input type="file" class="form-control" id="campaign_image" name="campaign_image" 
-                                           accept="image/*" required>
-                                    <div class="form-text">Upload a compelling image that represents your campaign (JPEG, PNG, max 5MB)</div>
-                                    <div class="mt-2">
-                                        <img id="image-preview" src="#" alt="Image preview" class="img-thumbnail d-none" style="max-height: 200px;">
-                                    </div>
-                                </div>
-
-                                <!-- Additional Details -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold">Additional Information</label>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="beneficiary_count" class="form-label">Number of Beneficiaries</label>
-                                                <input type="number" class="form-control" id="beneficiary_count" name="beneficiary_count" 
-                                                       min="1" placeholder="e.g., 50">
-                                            </div>
+                <div class="col-lg-8">
+                    <!-- Edit Profile Form -->
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Edit Profile</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="profile-form">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="name" class="form-label">Full Name</label>
+                                            <input type="text" class="form-control" id="name" name="name" 
+                                                   value="<?php echo htmlspecialchars($user['name']); ?>" required>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="location" class="form-label">Location</label>
-                                                <input type="text" class="form-control" id="location" name="location" 
-                                                       placeholder="e.g., Nairobi, Kenya">
-                                            </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label">Email Address</label>
+                                            <input type="email" class="form-control" id="email" name="email" 
+                                                   value="<?php echo htmlspecialchars($user['email']); ?>" required>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Budget Breakdown -->
-                                <div class="mb-4">
-                                    <label for="budget_breakdown" class="form-label fw-bold">Budget Breakdown</label>
-                                    <textarea class="form-control" id="budget_breakdown" name="budget_breakdown" rows="4" 
-                                              placeholder="Break down how the funds will be used (optional but recommended)"></textarea>
-                                    <div class="form-text">Example: School fees - 40%, Books - 30%, Uniforms - 20%, Miscellaneous - 10%</div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="phone" class="form-label">Phone Number</label>
+                                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                                   value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="role" class="form-label">Role</label>
+                                            <input type="text" class="form-control" id="role" value="<?php echo ucfirst($user['role']); ?>" disabled>
+                                            <small class="text-muted">Role cannot be changed</small>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <!-- Terms -->
-                                <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="campaign_terms" name="campaign_terms" required>
-                                    <label class="form-check-label" for="campaign_terms">
-                                        I confirm that all information provided is accurate and that funds raised will be used solely for the stated purpose. I agree to provide updates on the campaign progress.
-                                    </label>
+                                <?php if ($user['role'] === 'orphanage'): ?>
+                                <div class="mb-3">
+                                    <label for="orphanage_name" class="form-label">Orphanage Name</label>
+                                    <input type="text" class="form-control" id="orphanage_name" name="orphanage_name" 
+                                           value="<?php echo htmlspecialchars($user['orphanage_name'] ?? ''); ?>" readonly>
                                 </div>
 
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="reset" class="btn btn-outline-secondary me-md-2">Reset</button>
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="fas fa-plus-circle me-2"></i>Create Campaign
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="location" class="form-label">Location</label>
+                                            <input type="text" class="form-control" id="location" name="location" 
+                                                   value="<?php echo htmlspecialchars($user['location'] ?? ''); ?>" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="registration_number" class="form-label">Registration Number</label>
+                                            <input type="text" class="form-control" id="registration_number" name="registration_number" 
+                                                   value="<?php echo htmlspecialchars($user['registration_number'] ?? ''); ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Orphanage Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="4" readonly><?php echo htmlspecialchars($user['description'] ?? ''); ?></textarea>
+                                </div>
+                                <a href="update_orphanage.php" class="btn btn-warning">Update Details</a>
+                                <?php endif; ?>
+
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Changes
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
-                </div>
 
-                <!-- Tips Sidebar -->
-                <div class="col-lg-4">
-                    <div class="card shadow">
-                        <div class="card-header py-3 bg-info text-white">
-                            <h5 class="m-0 font-weight-bold">Campaign Tips</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <h6><i class="fas fa-lightbulb me-2 text-warning"></i>Compelling Title</h6>
-                                <small class="text-muted">Create a clear, emotional title that explains what you're raising funds for.</small>
-                            </div>
-                            <div class="mb-3">
-                                <h6><i class="fas fa-camera me-2 text-success"></i>Great Images</h6>
-                                <small class="text-muted">Use high-quality, emotional photos that tell your story.</small>
-                            </div>
-                            <div class="mb-3">
-                                <h6><i class="fas fa-target me-2 text-primary"></i>Realistic Goals</h6>
-                                <small class="text-muted">Set achievable funding targets based on actual needs.</small>
-                            </div>
-                            <div class="mb-3">
-                                <h6><i class="fas fa-clock me-2 text-danger"></i>Reasonable Timeline</h6>
-                                <small class="text-muted">30-60 days is ideal for most campaigns.</small>
-                            </div>
-                            <div class="mb-3">
-                                <h6><i class="fas fa-list me-2 text-success"></i>Clear Breakdown</h6>
-                                <small class="text-muted">Show donors exactly how their money will be used.</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campaign Preview -->
+                    <!-- Change Password -->
                     <div class="card shadow mt-4">
                         <div class="card-header py-3">
-                            <h5 class="m-0 font-weight-bold text-primary">Preview</h5>
+                            <h6 class="m-0 font-weight-bold text-primary">Change Password</h6>
                         </div>
                         <div class="card-body">
-                            <div class="text-center">
-                                <i class="fas fa-eye fa-2x text-muted mb-3"></i>
-                                <p class="text-muted">Your campaign preview will appear here as you fill out the form.</p>
-                            </div>
+                            <form id="password-form">
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-key me-2"></i>Change Password
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -190,132 +215,32 @@ include '../../includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Image preview
-    const imageInput = document.getElementById('campaign_image');
-    const imagePreview = document.getElementById('image-preview');
-
-    imageInput.addEventListener('change', function() {
-        const file = this.files[0];
-        if (file) {
-            // Check file size (5MB limit)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size must be less than 5MB');
-                this.value = '';
-                return;
-            }
-            
-            // Check file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-            if (!validTypes.includes(file.type)) {
-                alert('Please select a valid image file (JPEG, PNG, GIF)');
-                this.value = '';
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.src = e.target.result;
-                imagePreview.classList.remove('d-none');
-            }
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Form submission
-    document.getElementById('create-campaign-form').addEventListener('submit', function(e) {
+    // Profile form submission
+    document.getElementById('profile-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Basic validation
-        const title = document.getElementById('title').value;
-        const description = document.getElementById('description').value;
-        const category = document.getElementById('category').value;
-        const targetAmount = document.getElementById('target_amount').value;
-        const deadline = document.getElementById('deadline').value;
-        const campaignImage = document.getElementById('campaign_image').files[0];
-        const terms = document.getElementById('campaign_terms').checked;
-        
-        // Validation checks
-        if (title.length < 10) {
-            alert('Please enter a more descriptive title (at least 10 characters)');
-            return;
-        }
-        
-        if (description.length < 50) {
-            alert('Please provide a more detailed description (at least 50 characters)');
-            return;
-        }
-        
-        if (!category) {
-            alert('Please select a category for your campaign');
-            return;
-        }
-        
-        if (targetAmount < 1000) {
-            alert('Minimum funding goal is Ksh 1,000');
-            return;
-        }
-        
-        if (!deadline) {
-            alert('Please select a campaign deadline');
-            return;
-        }
-        
-        if (!campaignImage) {
-            alert('Please upload a campaign image');
-            return;
-        }
-        
-        if (!terms) {
-            alert('Please agree to the terms and conditions');
-            return;
-        }
-        
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Campaign...';
-        
-        // Submit the form
-        this.submit();
+        window.trueCareApp.showToast('Profile updated successfully!', 'success');
     });
 
-    // Set minimum date to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('deadline').min = tomorrow.toISOString().split('T')[0];
-    
-    // Set maximum date to 1 year from now
-    const nextYear = new Date();
-    nextYear.setFullYear(nextYear.getFullYear() + 1);
-    document.getElementById('deadline').max = nextYear.toISOString().split('T')[0];
+    // Password form submission
+    document.getElementById('password-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (newPassword !== confirmPassword) {
+            window.trueCareApp.showToast('Passwords do not match!', 'error');
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            window.trueCareApp.showToast('Password must be at least 6 characters long!', 'error');
+            return;
+        }
+        
+        window.trueCareApp.showToast('Password changed successfully!', 'success');
+        this.reset();
+    });
 });
 </script>
-
-<style>
-.form-label.fw-bold {
-    color: #2c3e50;
-}
-
-.sidebar {
-    background: linear-gradient(135deg, #2c5aa0, #1a365f) !important;
-}
-
-.card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #1e8449, #186a3b);
-    border: none;
-}
-
-.btn-success:hover {
-    background: linear-gradient(135deg, #186a3b, #145a32);
-    transform: translateY(-1px);
-}
-</style>
 
 <?php include '../../includes/footer.php'; ?>

@@ -207,13 +207,13 @@ include '../../includes/header.php';
                                                class="btn btn-outline-primary" title="View">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="#" class="btn btn-outline-success" title="Edit">
+                                            <a href="edit_campaign.php?id=<?php echo $campaign['id']; ?>" class="btn btn-outline-success" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="#" class="btn btn-outline-info" title="Analytics">
+                                            <a href="analytics_campaign.php?id=<?php echo $campaign['id']; ?>" class="btn btn-outline-info" title="Analytics">
                                                 <i class="fas fa-chart-bar"></i>
                                             </a>
-                                            <a href="#" class="btn btn-outline-danger" title="Delete">
+                                            <a href="delete_campaign.php?id=<?php echo $campaign['id']; ?>" class="btn btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this campaign?');">
                                                 <i class="fas fa-trash"></i>
                                             </a>
                                         </div>

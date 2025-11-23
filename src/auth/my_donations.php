@@ -1,6 +1,10 @@
+<?php require_once __DIR__ . '/../../includes/functions.php'; ?>
 <?php
 session_start();
-checkAuth('donor');
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'donor') {
+    header("Location: ../../login.php");
+    exit;
+}
 
 include '../../includes/config.php';
 $page_title = "My Donations - TrueCare";
@@ -132,8 +136,9 @@ try {
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img src="../../assets/images/<?php echo !empty($donation['image_url']) ? $donation['image_url'] : 'campaign1.jpg'; ?>" 
-                                                 class="rounded me-3" width="40" height="40" style="object-fit: cover;">
+                                            <div class="bg-secondary text-white rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-hand-holding-heart"></i>
+                                            </div>
                                             <div>
                                                 <h6 class="mb-0 small"><?php echo htmlspecialchars($donation['campaign_title'] ?? 'Unknown Campaign'); ?></h6>
                                             </div>
@@ -239,23 +244,25 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     const ctx = document.getElementById('paymentMethodChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['M-Pesa', 'Card', 'PayPal'],
-            datasets: [{
-                data: [paymentData.mpesa, paymentData.card, paymentData.paypal],
-                backgroundColor: ['#28a745', '#007bff', '#003087'],
-                hoverBackgroundColor: ['#218838', '#0056b3', '#002f65'],
-            }],
-        },
-        options: {
-            maintainAspectRatio: false,
-            legend: {
-                position: 'bottom'
-            }
-        },
-    });
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['M-Pesa', 'Card', 'PayPal'],
+                datasets: [{
+                    data: [paymentData.mpesa, paymentData.card, paymentData.paypal],
+                    backgroundColor: ['#28a745', '#007bff', '#003087'],
+                    hoverBackgroundColor: ['#218838', '#0056b3', '#002f65'],
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                legend: {
+                    position: 'bottom'
+                }
+            },
+        });
+    }
 });
 </script>
 <?php endif; ?>

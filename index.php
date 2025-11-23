@@ -22,7 +22,9 @@ include 'includes/header.php';
                 </div>
             </div>
             <div class="col-lg-6 text-center">
-                <img src="assets/images/hero-children.png" alt="Children Smiling" class="img-fluid rounded-3" style="max-height: 400px;">
+                <div class="bg-light rounded-3 p-5 text-primary">
+                    <i class="fas fa-hands-helping fa-8x"></i>
+                </div>
             </div>
         </div>
     </div>
@@ -74,7 +76,9 @@ include 'includes/header.php';
             <?php for($i = 1; $i <= 3; $i++): ?>
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="card h-100">
-                    <img src="assets/images/campaign<?php echo $i; ?>.jpg" class="card-img-top" alt="Campaign" height="200" style="object-fit: cover;">
+                    <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-hand-holding-heart fa-4x"></i>
+                    </div>
                     <div class="card-body d-flex flex-column">
                         <span class="badge bg-success mb-2">Education</span>
                         <h5 class="card-title">Education Support #<?php echo $i; ?></h5>
