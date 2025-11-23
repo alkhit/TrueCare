@@ -12,6 +12,25 @@ if (!isset($db)) {
 }
 include '../../includes/header.php';
 
+// Show top navbar for authenticated users (not admin)
+if (isset($_SESSION['user_id']) && $_SESSION['user_role'] !== 'admin') {
+    echo '<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="../auth/dashboard.php"><i class="fas fa-home me-2"></i>Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar" aria-controls="userNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="userNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="analytics_campaign.php"><i class="fas fa-chart-line me-1"></i>Analytics</a></li>
+                    <li class="nav-item"><a class="nav-link" href="create_campaign.php"><i class="fas fa-plus-circle me-1"></i>Create Campaign</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my_campaigns.php"><i class="fas fa-list me-1"></i>My Campaigns</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>';
+}
+
 // Get user ID from session
 $user_id = $_SESSION['user_id'] ?? null;
 
@@ -45,10 +64,7 @@ foreach ($myCampaigns as $campaign) {
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php include '../auth/sidebar.php'; ?>
-        </nav>
+        <!-- Sidebar removed for orphanage pages -->
 
         <!-- Main content -->
                 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
@@ -72,84 +88,11 @@ foreach ($myCampaigns as $campaign) {
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">My Campaigns</h1>
                                 <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+                                    <a href="create_campaign.php" class="btn btn-success">
                                         <i class="fas fa-plus-circle me-2"></i>Create New Campaign
-                                </button>
+                                    </a>
 
-                                <!-- Create Campaign Modal -->
-                                <div class="modal fade" id="createCampaignModal" tabindex="-1" aria-labelledby="createCampaignLabel" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form id="createCampaignForm">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="createCampaignLabel">Create New Campaign</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label for="title" class="form-label">Title</label>
-                                                        <input type="text" class="form-control" id="title" name="title" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="description" class="form-label">Description</label>
-                                                        <textarea class="form-control" id="description" name="description" required></textarea>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="category" class="form-label">Category</label>
-                                                        <select class="form-select" id="category" name="category" required>
-                                                            <option value="education">Education</option>
-                                                            <option value="medical">Medical</option>
-                                                            <option value="food">Food</option>
-                                                            <option value="shelter">Shelter</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="target_amount" class="form-label">Target Amount (Ksh)</label>
-                                                        <input type="number" class="form-control" id="target_amount" name="target_amount" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="deadline" class="form-label">Deadline</label>
-                                                        <input type="date" class="form-control" id="deadline" name="deadline" required>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <button type="submit" class="btn btn-success">Create</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                        <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            var form = document.getElementById('createCampaignForm');
-                            if (form) {
-                                form.addEventListener('submit', function(e) {
-                                    e.preventDefault();
-                                    var formData = new FormData(form);
-                                    fetch('create_campaign.php', {
-                                        method: 'POST',
-                                        body: formData
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            var createModal = bootstrap.Modal.getInstance(document.getElementById('createCampaignModal'));
-                                            createModal.hide();
-                                            var successModal = new bootstrap.Modal(document.getElementById('campaignSuccessModal'));
-                                            successModal.show();
-                                            form.reset();
-                                            // Optionally, reload campaigns list via AJAX here
-                                        } else {
-                                            alert(data.message || 'Error creating campaign.');
-                                        }
-                                    })
-                                    .catch(() => {
-                                        alert('Error creating campaign.');
-                                    });
-                                });
-                            }
-                        });
-                        </script>
+                                <!-- Modal and JS removed: all create buttons now link to create_campaign.php -->
             </div>
 
             <!-- Stats Cards -->

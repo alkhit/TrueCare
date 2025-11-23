@@ -1,7 +1,6 @@
 <?php
 require_once '../../includes/functions.php';
 require_once '../../includes/config.php';
-// Ensure $db is defined
 if (!isset($db)) {
     $db = get_db();
 }
@@ -9,13 +8,50 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 include '../../includes/header.php';
+
+$campaign_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if (!$campaign_id) {
+    echo showAlert('danger', 'Invalid campaign ID.');
+    exit;
+}
+$stmt = $db->prepare('SELECT orphanage_id FROM orphanages WHERE user_id = :user_id');
+$stmt->bindParam(':user_id', $_SESSION['user_id']);
+$stmt->execute();
+$orphanage = $stmt->fetch(PDO::FETCH_ASSOC);
+$orphanage_id = $orphanage['orphanage_id'] ?? null;
+if (!$orphanage_id) {
+    echo showAlert('danger', 'No orphanage found for this user.');
+    exit;
+}
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $title = sanitizeInput($_POST['title'] ?? '');
+    $category = sanitizeInput($_POST['category'] ?? '');
+    $target_amount = (float)($_POST['target_amount'] ?? 0);
+    $status = sanitizeInput($_POST['status'] ?? 'active');
+    if ($title === '' || $category === '' || $target_amount < 1000) {
+        echo showAlert('danger', 'Please fill all required fields correctly.');
+        exit;
+    }
+    $stmt = $db->prepare('UPDATE campaigns SET title = :title, category = :category, target_amount = :target_amount, status = :status WHERE campaign_id = :id AND orphanage_id = :orphanage_id');
+    $stmt->bindParam(':title', $title);
+    $stmt->bindParam(':category', $category);
+    $stmt->bindParam(':target_amount', $target_amount);
+    $stmt->bindParam(':status', $status);
+    $stmt->bindParam(':id', $campaign_id);
+    $stmt->bindParam(':orphanage_id', $orphanage_id);
+    if ($stmt->execute()) {
+        echo '<script>var modal = new bootstrap.Modal(document.getElementById("editSuccessModal")); modal.show();</script>';
+    } else {
+        echo showAlert('danger', 'Error updating campaign.');
+    }
+    exit;
+}
 ?>
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php include '../auth/sidebar.php'; ?>
-        </nav>
+        <!-- Sidebar removed for orphanage pages -->
         <!-- Main content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">

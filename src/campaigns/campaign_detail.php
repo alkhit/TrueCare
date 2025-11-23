@@ -30,13 +30,7 @@ $days_left = ceil((strtotime($campaign['deadline']) - time()) / (60 * 60 * 24));
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php 
-            $sidebar_path = __DIR__ . '/../auth/sidebar.php';
-            if (file_exists($sidebar_path)) { include $sidebar_path; }
-            ?>
-        </nav>
+        <!-- Sidebar removed for orphanage pages -->
 
         <!-- Main content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">

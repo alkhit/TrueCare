@@ -33,8 +33,23 @@ if (!file_exists($image_path)) {
 
 // Insert campaign
 
-$stmt = $db->prepare('INSERT INTO campaigns (orphanage_id, title, description, category, target_amount, deadline, image_url, status) VALUES ((SELECT orphanage_id FROM orphanages WHERE user_id = :user_id), :title, :description, :category, :target_amount, :deadline, :image_url, :status)');
+// Check orphanage exists and is verified
+$stmt = $db->prepare('SELECT orphanage_id, status FROM orphanages WHERE user_id = :user_id');
 $stmt->bindParam(':user_id', $_SESSION['user_id']);
+$stmt->execute();
+$orphanage = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$orphanage) {
+    echo showAlert('danger', 'No orphanage found for this user. Please register your orphanage first.');
+    exit;
+}
+if ($orphanage['status'] !== 'verified') {
+    echo showAlert('danger', 'Your orphanage must be verified before creating campaigns.');
+    exit;
+}
+$orphanage_id = $orphanage['orphanage_id'];
+
+$stmt = $db->prepare('INSERT INTO campaigns (orphanage_id, title, description, category, target_amount, deadline, image_url, status) VALUES (:orphanage_id, :title, :description, :category, :target_amount, :deadline, :image_url, :status)');
+$stmt->bindParam(':orphanage_id', $orphanage_id);
 $stmt->bindParam(':title', $title);
 $stmt->bindParam(':description', $description);
 $stmt->bindParam(':category', $category);
@@ -43,7 +58,9 @@ $stmt->bindParam(':deadline', $deadline);
 $stmt->bindParam(':image_url', $image_path);
 $status = 'active';
 $stmt->bindParam(':status', $status);
-$stmt->execute();
-
-echo showAlert('success', 'Campaign created successfully!');
-echo '<script>setTimeout(function(){ window.location.href = "my_campaigns.php"; }, 1500);</script>';
+if ($stmt->execute()) {
+    echo showAlert('success', 'Campaign created successfully!');
+    echo '<script>setTimeout(function(){ window.location.href = "my_campaigns.php"; }, 1500);</script>';
+} else {
+    echo showAlert('danger', 'Error creating campaign. Please try again or contact support.');
+}

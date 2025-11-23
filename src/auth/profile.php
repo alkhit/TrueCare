@@ -10,6 +10,24 @@ require_once '../../includes/config.php';
 require_once '../../includes/functions.php';
 require_once '../../includes/header.php';
 
+if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'orphanage') {
+    echo '<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="dashboard.php"><i class="fas fa-home me-2"></i>Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar" aria-controls="userNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="userNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="../campaigns/analytics_campaign.php"><i class="fas fa-chart-line me-1"></i>Analytics</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../campaigns/create_campaign.php"><i class="fas fa-plus-circle me-1"></i>Create Campaign</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../campaigns/my_campaigns.php"><i class="fas fa-list me-1"></i>My Campaigns</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>';
+}
+
 $db = get_db();
 $user_id = $_SESSION['user_id'];
 $password_message = '';
@@ -73,11 +91,6 @@ $sidebar = __DIR__ . '/sidebar.php';
 
 <div class="container-fluid">
     <div class="row">
-
-        <!-- SIDEBAR -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-            <?php if (file_exists($sidebar)) { include $sidebar; } ?>
-        </nav>
 
         <!-- MAIN CONTENT -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
@@ -197,7 +210,7 @@ $sidebar = __DIR__ . '/sidebar.php';
                                     <div class="mb-3">
                                         <label class="form-label">Orphanage Name</label>
                                         <input type="text" class="form-control" 
-                                               value="<?php echo htmlspecialchars($user['orphanage_name']); ?>" 
+                                                   value="<?php echo htmlspecialchars($user['orphanage_name'] ?? ''); ?>" 
                                                readonly>
                                     </div>
 
@@ -205,19 +218,19 @@ $sidebar = __DIR__ . '/sidebar.php';
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Location</label>
                                             <input type="text" class="form-control" 
-                                                   value="<?php echo htmlspecialchars($user['orphanage_location']); ?>" readonly>
+                                                   value="<?php echo htmlspecialchars($user['orphanage_location'] ?? ''); ?>" readonly>
                                         </div>
 
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Registration Number</label>
                                             <input type="text" class="form-control"
-                                                   value="<?php echo htmlspecialchars($user['registration_number']); ?>" readonly>
+                                                   value="<?php echo htmlspecialchars($user['registration_number'] ?? ''); ?>" readonly>
                                         </div>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label">Orphanage Description</label>
-                                        <textarea class="form-control" readonly><?php echo htmlspecialchars($user['orphanage_description']); ?></textarea>
+                                            <textarea class="form-control" readonly><?php echo htmlspecialchars($user['orphanage_description'] ?? ''); ?></textarea>
                                     </div>
 
                                     <a href="update_orphanage.php" class="btn btn-warning">Update Details</a>

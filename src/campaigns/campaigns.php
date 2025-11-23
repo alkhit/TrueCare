@@ -2,8 +2,8 @@
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: ../../login.php");
-    exit;
+        header("Location: ../../login.php");
+        exit;
 }
 
 require_once '../../includes/config.php';
@@ -13,12 +13,33 @@ require_once '../../includes/header.php';
 // Get DB connection
 $db = get_db();
 
+$user_role = $_SESSION['user_role'] ?? '';
+
 // Get filter parameters
 $search   = $_GET['search'] ?? '';
 $category = $_GET['category'] ?? '';
 $location = $_GET['location'] ?? '';
 $sort     = $_GET['sort'] ?? 'newest';
 
+// Admin Navigation Bar (for admin users)
+if ($user_role === 'admin') {
+        echo '<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded shadow-sm">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" href="../../src/admin/admin.php"><i class="fas fa-cog me-2"></i>Admin Panel</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="adminNavbar">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link" href="../../src/admin/verify_orphanages.php"><i class="fas fa-clipboard-check me-1"></i>Verify Orphanages</a></li>
+                        <li class="nav-item"><a class="nav-link" href="../../src/admin/manage_users.php"><i class="fas fa-users-cog me-1"></i>Manage Users</a></li>
+                        <li class="nav-item"><a class="nav-link" href="../../src/admin/manage_campaigns.php"><i class="fas fa-hand-holding-heart me-1"></i>Manage Campaigns</a></li>
+                        <li class="nav-item"><a class="nav-link" href="../../src/admin/reports.php"><i class="fas fa-chart-bar me-1"></i>Reports</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>';
+}
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Browse Campaigns</h1>

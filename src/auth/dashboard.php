@@ -24,6 +24,25 @@ if (!file_exists($header_path)) {
 }
 require_once $header_path;
 
+// Show top navbar for authenticated users (not admin)
+if (isset($_SESSION['user_id']) && $_SESSION['user_role'] !== 'admin') {
+    echo '<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="dashboard.php"><i class="fas fa-home me-2"></i>Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar" aria-controls="userNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="userNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="../campaigns/analytics_campaign.php"><i class="fas fa-chart-line me-1"></i>Analytics</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../campaigns/create_campaign.php"><i class="fas fa-plus-circle me-1"></i>Create Campaign</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../campaigns/my_campaigns.php"><i class="fas fa-list me-1"></i>My Campaigns</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>';
+}
+
 
 // Get user info from session
 $user_id = $_SESSION['user_id'] ?? null;
@@ -183,7 +202,27 @@ function getRoleTemplatePath($role) {
 }
 ?>
 
-<!-- Main content area - removed the container-fluid wrapper since header already handles the main content -->
+<!-- Admin Navigation Bar (for admin users) -->
+<?php if ($user_role === 'admin'): ?>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="../../src/admin/admin.php"><i class="fas fa-cog me-2"></i>Admin Panel</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="adminNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="../../src/admin/verify_orphanages.php"><i class="fas fa-clipboard-check me-1"></i>Verify Orphanages</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../src/admin/manage_users.php"><i class="fas fa-users-cog me-1"></i>Manage Users</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../src/admin/manage_campaigns.php"><i class="fas fa-hand-holding-heart me-1"></i>Manage Campaigns</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../src/admin/reports.php"><i class="fas fa-chart-bar me-1"></i>Reports</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../src/admin/support_tickets.php"><i class="fas fa-headset me-1"></i>Support</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../src/admin/settings.php"><i class="fas fa-cogs me-1"></i>Settings</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<?php endif; ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="fas fa-tachometer-alt me-2"></i>
@@ -226,6 +265,45 @@ if (isset($_SESSION['error'])) {
 ?>
 
 
+
+
+<!-- Orphanage Stats Card -->
+<?php if ($user_role === 'orphanage'): ?>
+<div class="row mb-4">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Orphanage Campaign Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="fw-bold fs-4 text-success"><?php echo $dashboard_data['total_campaigns']; ?></div>
+                        <div class="text-muted">Total Campaigns</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="fw-bold fs-4 text-info"><?php echo $dashboard_data['active_campaigns']; ?></div>
+                        <div class="text-muted">Active Campaigns</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="fw-bold fs-4 text-warning">Ksh <?php echo number_format($dashboard_data['total_goal']); ?></div>
+                        <div class="text-muted">Total Goal</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="fw-bold fs-4 text-primary">Ksh <?php echo number_format($dashboard_data['total_raised']); ?></div>
+                        <div class="text-muted">Total Raised</div>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <span class="badge bg-<?php echo $dashboard_data['verification_status'] === 'verified' ? 'success' : ($dashboard_data['verification_status'] === 'pending' ? 'warning' : 'danger'); ?> px-3 py-2">
+                        <?php echo ucfirst($dashboard_data['verification_status']); ?>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Featured Campaigns Section -->
 <section class="featured-campaigns py-5">

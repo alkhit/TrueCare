@@ -80,7 +80,7 @@ try {
     } elseif ($user['role'] === 'orphanage') {
         $redirect = abs_path('src/auth/dashboard.php');
     } elseif ($user['role'] === 'admin') {
-        $redirect = abs_path('src/admin/admin.php');
+        $redirect = abs_path('src/auth/dashboard.php');
     } else {
         $redirect = abs_path('src/auth/dashboard.php');
     }
